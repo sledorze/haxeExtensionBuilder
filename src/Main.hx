@@ -6,7 +6,7 @@ package ;
  */
  
 import js.JQuery;
-using ExtensionTest;
+using MyJQueryPluginExtension;
  
 class Main {
 	
