@@ -30,9 +30,10 @@ class Main {
 
     x.valFun(function (x, y) { } );
     
-    var joe : Joe =  {
-      tata : Int,
-      toto : String      
+    
+    var joe : Joe = {
+      tata : 5,
+      toto : "toto"
     };
     
     joe.valFun(function (x, y) { } );

@@ -18,7 +18,7 @@ class TypeExtenderHelper {
   static function baseTypeAsTypePath(bt : BaseType, params : Array<Type>) : TypePath return {
     pack : bt.pack,
     name : bt.name,
-    params : params.map(toComplexType).map(TPType).array(),
+    params : params.map(function (x) return TPType(toComplexType(x))).array(),
     sub : null
   }
 
@@ -40,7 +40,7 @@ class TypeExtenderHelper {
       case TEnum(t, params): TPath(baseTypeAsTypePath(t.get(), params));
       case TInst(t, params): TPath(baseTypeAsTypePath(t.get(), params));
       case TType(t , params): TPath(baseTypeAsTypePath(t.get(), params));
-      case TFun(args, ret): TFunction(args.map(function (x) return x.t).map(toComplexType).array(), toComplexType(ret));
+      case TFun(args, ret): TFunction(args.map(function (x) return toComplexType(x.t)).array(), toComplexType(ret));
       case TAnonymous(a): TAnonymous(a.get().fields.map(classFieldAsField).array());
       case TDynamic( t ): throw "Dynamic type not supported"; null;
       case TLazy( f ): throw "Lazy type not supported"; null;
@@ -59,22 +59,23 @@ class TypeExtender<T> {
   
   static  function isNativeMeta(meta) return
     meta.name == ":native"
+
+  static function isExtension(el) return
+    el.t.get().name == extensionClassName
   
   public static function build(): Array<Field> {    
     
     var retFields : Array<Field> = [];
-    
-    var clazz : ClassType = Context.getLocalClass().get();    
-    
-    function isExtension(el) return
-      el.t.get().name == extensionClassName;
+     
+    var newType : ComplexType = {
+        
+      var extensionType = {
+        var clazz : ClassType = Context.getLocalClass().get();      
+        clazz.interfaces.filter(isExtension).array()[0].params[0];
+      }
       
-    var typeInst = clazz.interfaces.filter(isExtension).array()[0];
-    if (typeInst.params.length != 1)
-      throw extensionClassName + " accepts one parameter to extend";
-      
-    var newType : ComplexType =
-      TypeExtenderHelper.toComplexType(typeInst.params[0]);
+      TypeExtenderHelper.toComplexType(extensionType);
+    }
     
     var additionalJQueryArg : FunctionArg = {
       name : "__tp",
