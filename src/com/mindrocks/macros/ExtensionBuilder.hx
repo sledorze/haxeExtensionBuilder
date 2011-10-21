@@ -7,11 +7,48 @@ package com.mindrocks.macros;
 
 import haxe.macro.Context;
 import haxe.macro.Expr;
+import haxe.macro.Type;
 
 using Lambda;
 
 #if macro
-class ExtensionBuilder {
+
+class ConversionHelper {
+  
+  static function baseTypeAsTypePath(bt : BaseType, params : Array<Type>) : TypePath return {
+    pack : bt.pack,
+    name : bt.name,
+    params : params.map(toComplexType).map(TPType).array(),
+    sub : null
+  }
+
+  public static function typeToFieldType(tp : Type) : FieldType return
+    FVar(toComplexType(tp)) // lacks function ...    
+
+  public static function classFieldAsField(cf : ClassField) : Field  return {
+    name : cf.name,
+    doc : cf.doc,
+    access : [cf.isPublic == true?APublic:APrivate],
+    kind : typeToFieldType(cf.type),
+    pos : cf.pos,
+    meta : []
+  }
+  
+  public static function  toComplexType(p : Type) : ComplexType return
+    switch (p) {
+      case TMono(t): if (t == null) throw "unknown type" else toComplexType(t.get());
+      case TEnum(t, params): TPath(baseTypeAsTypePath(t.get(), params));
+      case TInst(t, params): TPath(baseTypeAsTypePath(t.get(), params));
+      case TType(t , params): TPath(baseTypeAsTypePath(t.get(), params));
+      case TFun(args, ret): TFunction(args.map(function (x) return x.t).map(toComplexType).array(), toComplexType(ret));
+      case TAnonymous(a): TAnonymous(a.get().fields.map(classFieldAsField).array());
+      case TDynamic( t ): throw "Dynamic type not supported"; null;
+      case TLazy( f ): throw "Lazy type not supported"; null;
+    }
+  
+}
+
+class ExtensionBuilder<T> {
   
   static  function addIfNotPresent(arr : Array<Access>, e) {
     if (!arr.has(e)) arr.push(e);
@@ -21,26 +58,34 @@ class ExtensionBuilder {
   static  function isNativeMeta(meta) return
     meta.name == ":native"
   
-  public static function build(_extendedType : String): Array<Field> {    
-    var retFields = [];
+  public static function build(): Array<Field> {    
     
-    var pack = _extendedType.split('.');
-    var extendedType = pack[pack.length - 1];
-    pack.pop();
+    var retFields : Array<Field> = [];
+    
+    var clazz : ClassType = Context.getLocalClass().get();    
+    
+    function isExtension(el) return
+      el.t.get().name == "GenExtension";
+      
+    var typeInst = clazz.interfaces.filter(isExtension).array()[0];
+    if (typeInst.params.length != 1)
+      throw "GenExtension requiers one parameter to extend";
+      
+    var newType : ComplexType =
+      ConversionHelper.toComplexType(typeInst.params[0]);
     
     var additionalJQueryArg : FunctionArg = {
       name : "__tp",
       opt : false,
-      type : TPath({ pack : pack, name : extendedType, params : [], sub : null }),
+      type : newType,
       value : null,
     };
 
     var arr = Context.getClassPath();
-    Context.getBuildFields().map(function (field) {
+    Context.getBuildFields().map(function (field : Field) {
           
       var isNative = field.meta.exists(isNativeMeta);
       if (isNative) {
-
         
         field.meta.filter(isNativeMeta).map(function (meta) {
               
@@ -62,7 +107,7 @@ class ExtensionBuilder {
                             f.args.map(argToParam).array();
                           }
                           
-                          // coz I thinks it's faster than reparsing..
+                          // coz I think it's faster than reparsing..
                           var newExpr : Expr = {
                               expr : EReturn(
                                   { expr : EUntyped(
@@ -70,18 +115,14 @@ class ExtensionBuilder {
                                           { expr : EField(
                                               { expr : EConst(CIdent("__tp")), pos : currentPos, },
                                               funcName + " " /*TODO: fix the real issue; don't know why yet but it prevents an issue.. (it's late) */
-                                            ),
-                                            pos : currentPos
+                                            ), pos : currentPos
                                           },
                                           newArgs
-                                        ),
-                                        pos : currentPos
+                                        ), pos : currentPos
                                       }
-                                    ),
-                                    pos : currentPos
+                                    ), pos : currentPos
                                   }
-                                ),
-                              pos : currentPos
+                                ), pos : currentPos
                             };
                           
                           var newFunc =
@@ -103,10 +144,12 @@ class ExtensionBuilder {
                       var res = field.access;
                       addIfNotPresent(res, AStatic);
                       addIfNotPresent(res, AInline);
+                      if (!res.has(APrivate))
+                        addIfNotPresent(res, APublic);
                       res;
                     }
                     
-                    var newField =  {
+                    var newField : Field =  {
                       name : field.name,
                       doc : field.doc,
                       access : newAcess,

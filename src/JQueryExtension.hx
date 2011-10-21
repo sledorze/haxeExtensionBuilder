@@ -5,6 +5,14 @@ package ;
  * @author sledorze
  */
 
-@:autoBuild(com.mindrocks.macros.ExtensionBuilder.build("js.JQuery")) interface JQueryExtension { } 
+@:autoBuild(com.mindrocks.macros.ExtensionBuilder.build()) interface GenExtension<T> { } 
 
+class Foo<T> {
+  public function new() {
+    
+  }
+}
 
+class Toto {
+  
+}
