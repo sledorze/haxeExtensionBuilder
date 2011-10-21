@@ -22,14 +22,11 @@ class TypeExtenderHelper {
     sub : null
   }
 
-  public static function typeToFieldType(tp : Type) : FieldType return
-    FVar(toComplexType(tp)) // lacks function ...    
-
-  public static function classFieldAsField(cf : ClassField) : Field  return {
+  static function classFieldAsField(cf : ClassField) : Field  return {
     name : cf.name,
     doc : cf.doc,
     access : [cf.isPublic == true?APublic:APrivate],
-    kind : typeToFieldType(cf.type),
+    kind : FVar(toComplexType(cf.type)),
     pos : cf.pos,
     meta : []
   }

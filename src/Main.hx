@@ -36,8 +36,7 @@ class Main {
       toto : "toto"
     };
     
-    joe.valFun(function (x, y) { } );
-    
+    joe.valSet.cc(5); // just to verify we can chain with other using extensions.. (nice, nice)
 	}
   
 }

@@ -39,7 +39,7 @@ typedef Joe = {
 
 class TestTypedefExtension implements ExtendsType<Joe> {
   @:native(val) public function valGet() : Dynamic;
-  @:native(val) public function valSet(x : Dynamic) : JQuery;
+  @:native(val) public function valSet(x : Dynamic, cb : Int -> Void ) : Void;
   @:native(val) public function valFun(f : Int -> Dynamic -> Dynamic) : JQuery;
 }
 
@@ -53,4 +53,10 @@ class TestFunExtension implements ExtendsType<Toto -> Void -> Tata> {
   @:native(val) public function valGet() : Dynamic;
   @:native(val) public function valSet(x : Dynamic) : JQuery;
   @:native(val) public function valFun(f : Int -> Dynamic -> Dynamic) : JQuery;
+}
+
+class ContExt {
+  public static function cc < A, B, C > (f : A -> (B -> Void) -> Void, a : A) : Void { // should return a future
+    // ..
+  }
 }
