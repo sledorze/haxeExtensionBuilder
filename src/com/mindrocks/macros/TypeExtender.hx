@@ -66,114 +66,109 @@ class TypeExtender<T> {
   public static function build(): Array<Field> {    
     
     var retFields : Array<Field> = [];
-     
-    var newType : ComplexType = {
-        
-      var extensionType = {
-        var clazz : ClassType = Context.getLocalClass().get();      
-        clazz.interfaces.filter(isExtension).array()[0].params[0];
+    
+    var additionalJQueryArg : FunctionArg = {      
+      var newType : ComplexType = {          
+        var extensionType = {
+          var clazz : ClassType = Context.getLocalClass().get();      
+          clazz.interfaces.filter(isExtension).array()[0].params[0];
+        }        
+        TypeExtenderHelper.toComplexType(extensionType);
       }
       
-      TypeExtenderHelper.toComplexType(extensionType);
-    }
-    
-    var additionalJQueryArg : FunctionArg = {
-      name : "__tp",
-      opt : false,
-      type : newType,
-      value : null,
+      {
+        name : "__tp",
+        opt : false,
+        type : newType,
+        value : null,
+      }
     };
 
     var arr = Context.getClassPath();
     Context.getBuildFields().map(function (field : Field) {
-          
-      var isNative = field.meta.exists(isNativeMeta);
-      if (isNative) {
         
-        field.meta.filter(isNativeMeta).map(function (meta) {
-              
-          meta.params.map(function (param) {          
-            switch (param.expr) {
-              case EConst( c ):
-                switch(c) {
-                  case CString( funcName ):
-                 
-                    var newKind = 
-                      switch (field.kind) {
-                        case FFun(f):
-
-                          var currentPos =  field.pos;
+      var nativeMetas = field.meta.filter(isNativeMeta);
+      if (nativeMetas.length == 1) {
+        var meta = nativeMetas.first();
+        
+        meta.params.map(function (param) {          
+          switch (param.expr) {
+            case EConst( c ):
+              switch(c) {
+                case CIdent( funcName ) :
+               
+                  var newKind = 
+                    switch (field.kind) {
+                      case FFun(f):
+                        var currentPos =  field.pos;
+                        
+                        var newArgs = {
+                          function argToParam(arg) return
+                            { expr : EConst(CIdent(arg.name)), pos : currentPos }
+                          f.args.map(argToParam).array();
+                        }
+                        
+                        // coz I think it's faster than reparsing..
+                        var newExpr : Expr = {
+                            expr : EReturn(
+                                { expr : EUntyped(
+                                    { expr : ECall(
+                                        { expr : EField(
+                                            { expr : EConst(CIdent("__tp")), pos : currentPos, },
+                                            funcName + " " /*TODO: fix the real issue; don't know why yet but it prevents an issue.. (it's late) */
+                                          ), pos : currentPos
+                                        },
+                                        newArgs
+                                      ), pos : currentPos
+                                    }
+                                  ), pos : currentPos
+                                }
+                              ), pos : currentPos
+                          };
+                        
+                        var newFunc =
+                          FFun({
+                            ret : f.ret,
+                            params : f.params,
+                            expr : newExpr,
+                            args : [additionalJQueryArg].concat(f.args)
+                          });
                           
-                          var newArgs = {
-                            function argToParam(arg) return
-                              { expr : EConst(CIdent(arg.name)), pos : currentPos }
-                            f.args.map(argToParam).array();
-                          }
-                          
-                          // coz I think it's faster than reparsing..
-                          var newExpr : Expr = {
-                              expr : EReturn(
-                                  { expr : EUntyped(
-                                      { expr : ECall(
-                                          { expr : EField(
-                                              { expr : EConst(CIdent("__tp")), pos : currentPos, },
-                                              funcName + " " /*TODO: fix the real issue; don't know why yet but it prevents an issue.. (it's late) */
-                                            ), pos : currentPos
-                                          },
-                                          newArgs
-                                        ), pos : currentPos
-                                      }
-                                    ), pos : currentPos
-                                  }
-                                ), pos : currentPos
-                            };
-                          
-                          var newFunc =
-                            FFun({
-                              ret : f.ret,
-                              params : f.params,
-                              expr : newExpr,
-                              args : [additionalJQueryArg].concat(f.args)
-                            });
-                            
-                          newFunc;
-                        default : throw ":native can only be used on functions, not : " + Std.string(field.kind); null;
-                      }
-                 
-                    var newMetas = field.meta.copy();
-                      newMetas.remove(meta);
-
-                    var newAcess = {
-                      var res = field.access;
-                      addIfNotPresent(res, AStatic);
-                      addIfNotPresent(res, AInline);
-                      if (!res.has(APrivate))
-                        addIfNotPresent(res, APublic);
-                      res;
+                        newFunc;
+                      default : throw ":native can only be used on functions, not : " + Std.string(field.kind); null;
                     }
-                    
-                    var newField : Field =  {
-                      name : field.name,
-                      doc : field.doc,
-                      access : newAcess,
-                      kind : newKind,
-                      pos : field.pos,
-                      meta : newMetas
-                    };
-                    retFields.push(newField);
-                  default : throw "only string are allowed for :native parameter";
-                }
-                default:
-              }
+               
+                  var newMetas = field.meta.copy();
+                    newMetas.remove(meta);
 
-          });
-        });
+                  var newAcess = {
+                    var res = field.access;
+                    addIfNotPresent(res, AStatic);
+                    addIfNotPresent(res, AInline);
+                    if (!res.has(APrivate))
+                      addIfNotPresent(res, APublic);
+                    res;
+                  }
+                  
+                  var newField : Field =  {
+                    name : field.name,
+                    doc : field.doc,
+                    access : newAcess,
+                    kind : newKind,
+                    pos : field.pos,
+                    meta : newMetas
+                  };
+                  retFields.push(newField);
+                default : throw "only string are allowed for :native parameter";
+              }
+              default:
+            }
             
+        });
       } else {
         retFields.push(field);            
       }
     });
-    
     return retFields;
   }
 }

@@ -16,7 +16,6 @@
   <!-- Other classes to be compiled into your SWF -->
   <classpaths>
     <class path="src" />
-    <class path="..\..\..\Motion-Twin\haxe\std\haxe\macro" />
   </classpaths>
   <!-- Build options -->
   <build>
