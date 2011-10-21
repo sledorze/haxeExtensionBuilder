@@ -13,7 +13,7 @@ using Lambda;
 
 #if macro
 
-class ConversionHelper {
+class TypeExtenderHelper {
   
   static function baseTypeAsTypePath(bt : BaseType, params : Array<Type>) : TypePath return {
     pack : bt.pack,
@@ -48,7 +48,9 @@ class ConversionHelper {
   
 }
 
-class ExtensionBuilder<T> {
+class TypeExtender<T> {
+  
+  static var extensionClassName = "ExtendsType";
   
   static  function addIfNotPresent(arr : Array<Access>, e) {
     if (!arr.has(e)) arr.push(e);
@@ -65,14 +67,14 @@ class ExtensionBuilder<T> {
     var clazz : ClassType = Context.getLocalClass().get();    
     
     function isExtension(el) return
-      el.t.get().name == "GenExtension";
+      el.t.get().name == extensionClassName;
       
     var typeInst = clazz.interfaces.filter(isExtension).array()[0];
     if (typeInst.params.length != 1)
-      throw "GenExtension requiers one parameter to extend";
+      throw extensionClassName + " accepts one parameter to extend";
       
     var newType : ComplexType =
-      ConversionHelper.toComplexType(typeInst.params[0]);
+      TypeExtenderHelper.toComplexType(typeInst.params[0]);
     
     var additionalJQueryArg : FunctionArg = {
       name : "__tp",
