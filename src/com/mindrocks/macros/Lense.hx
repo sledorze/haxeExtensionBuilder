@@ -31,4 +31,6 @@ class LenseSyntactic {
   inline public static function get<A, B>(a : A, l : Lense<A, B>) : B return
     l.get(a)
    
+  inline public static function mod < A, B > (a : A, l : Lense < A, B > , f : B -> B) : A return
+  LenseExtension.mod(l, f, a)
 }

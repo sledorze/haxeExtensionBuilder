@@ -62,6 +62,15 @@ class LensesTest {
     
     var ageOfUserGroupLead = UserGroup_.lead_.andThen(User_.age_);
     
+    function complexUserModification(user) {
+      var newUser : User = Reflect.copy(user);
+      // do you stuff
+      return newUser;
+    }
+    
+    userGroup.mod(UserGroup_.lead_, complexUserModification);
+    
+    
     var newGroup = ageOfUserGroupLead.set(5, userGroup);
     
     // same as: syntactic Sugar through another extension.
