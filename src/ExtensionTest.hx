@@ -74,8 +74,43 @@ class Fut3 {
   public static function cc < A, B, C, R> (f : A -> B -> C -> (R -> Void) -> Void, a : A, b : B, c : C) : Future<R> { return null; }
 }
 
-  /*
-  public static function cc < A, B> (f : A -> (B -> Void) -> Void) : A -> Future<B> { // should return a future
-    // ..
-  }*/
+
+using ExtensionTest;
+
+import js.JQuery;
+// import Extensions;
+// using Extensions;
+
+class ExtensionTest {
+
+  public static function compilationTest() {
+    
+    var jq = new JQuery("#someId");
+    
+    jq.valGet(); // generates jq.val();
+    jq.valSet("content"); // generates jq.val("content");
+    jq.valFun(function (i, v) return v); // jq.val(function (i, v) { return v;});
+    
+    var foo = new Foo<Toto, Tata>();
+    
+    var x = {
+      tata : 5,
+      toto : function (a : Array<String>, b: Int) : { b : Bool, c : Int } {
+        return null;
+      }
+    };
+
+    x.valFun(function (x, y) { } );
+    
+    var joe : Joe = {
+      tata : 5,
+      toto : "toto"
+    };
+    
+    var z = joe.valSet(5, function (i) { } );
+
+//    var x = joe.valSet.cc; // (5); // just to verify we can chain with other using extensions.. (nice, nice)
+
+  }
+}
 

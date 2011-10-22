@@ -47,7 +47,6 @@ class TypeExtenderHelper {
 
 class TypeExtender<T> {
   
-  static var extensionClassName = "ExtendsType";
   
   static  function addIfNotPresent(arr : Array<Access>, e) {
     if (!arr.has(e)) arr.push(e);
@@ -57,6 +56,7 @@ class TypeExtender<T> {
   static  function isNativeMeta(meta) return
     meta.name == ":native"
 
+  static var extensionClassName = "ExtendsType";
   static function isExtension(el) return
     el.t.get().name == extensionClassName
   
@@ -64,12 +64,12 @@ class TypeExtender<T> {
     
     var retFields : Array<Field> = [];
     
-    var additionalArg : FunctionArg = {      
-      var newType : ComplexType = {          
+    var additionalArg : FunctionArg = {
+      var newType : ComplexType = {
         var extensionType = {
           var clazz : ClassType = Context.getLocalClass().get();      
           clazz.interfaces.filter(isExtension).array()[0].params[0];
-        }        
+        }
         TypeExtenderHelper.toComplexType(extensionType);
       }
       
