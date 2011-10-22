@@ -39,7 +39,7 @@ typedef Joe = {
 
 class TestTypedefExtension implements ExtendsType<Joe> {
   @:native(val) public function valGet() : Dynamic;
-  @:native(val) public function valSet(x : Dynamic, cb : Int -> Void ) : Void;
+  @:native(val) public function valSet<T>(x : T, cb : Int -> Void ) : Void;
   @:native(val) public function valFun(f : Int -> Dynamic -> Dynamic) : JQuery;
 }
 
@@ -55,8 +55,27 @@ class TestFunExtension implements ExtendsType<Toto -> Void -> Tata> {
   @:native(val) public function valFun(f : Int -> Dynamic -> Dynamic) : JQuery;
 }
 
-class ContExt {
-  public static function cc < A, B, C > (f : A -> (B -> Void) -> Void, a : A) : Void { // should return a future
-    // ..
-  }
+
+class Future<T> {
+  static public function create<T>(x : T) : Future<T>  { return null;  }
+  public function bind<U>(f : T -> Future<U>) : Future<U> { return null;  }
 }
+
+class Fut0 {
+  public static function cc < R > (f : (R -> Void) -> Void) : Future<R> { return null; }
+}
+class Fut1 {
+  public static function cc < A, R > (f : A -> (R -> Void) -> Void, a : A) : Future<R> { return null; }
+}
+class Fut2 {
+  public static function cc < A, B, R > (f : A -> B -> (R -> Void) -> Void, a : A, b : B) : Future<R> { return null; }
+}
+class Fut3 {
+  public static function cc < A, B, C, R> (f : A -> B -> C -> (R -> Void) -> Void, a : A, b : B, c : C) : Future<R> { return null; }
+}
+
+  /*
+  public static function cc < A, B> (f : A -> (B -> Void) -> Void) : A -> Future<B> { // should return a future
+    // ..
+  }*/
+

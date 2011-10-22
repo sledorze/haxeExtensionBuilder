@@ -30,13 +30,14 @@ class Main {
 
     x.valFun(function (x, y) { } );
     
-    
     var joe : Joe = {
       tata : 5,
       toto : "toto"
     };
     
-    joe.valSet.cc(5); // just to verify we can chain with other using extensions.. (nice, nice)
+    var z = joe.valSet(5, function (i) { } );
+//    var x = joe.valSet.cc; // (5); // just to verify we can chain with other using extensions.. (nice, nice)
+    
 	}
   
 }

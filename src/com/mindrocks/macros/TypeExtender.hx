@@ -25,7 +25,7 @@ class TypeExtenderHelper {
   static function classFieldAsField(cf : ClassField) : Field  return {
     name : cf.name,
     doc : cf.doc,
-    access : [cf.isPublic == true?APublic:APrivate],
+    access : [cf.isPublic?APublic:APrivate],
     kind : FVar(toComplexType(cf.type)),
     pos : cf.pos,
     meta : []
@@ -64,7 +64,7 @@ class TypeExtender<T> {
     
     var retFields : Array<Field> = [];
     
-    var additionalJQueryArg : FunctionArg = {      
+    var additionalArg : FunctionArg = {      
       var newType : ComplexType = {          
         var extensionType = {
           var clazz : ClassType = Context.getLocalClass().get();      
@@ -128,7 +128,7 @@ class TypeExtender<T> {
                             ret : f.ret,
                             params : f.params,
                             expr : newExpr,
-                            args : [additionalJQueryArg].concat(f.args)
+                            args : [additionalArg].concat(f.args)
                           });
                           
                         newFunc;
