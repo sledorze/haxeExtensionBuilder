@@ -22,3 +22,13 @@ class LenseExtension {
   
   inline public static function compose < A, B, C > ( l2 : Lense < B, C >, l1 : Lense < A, B > ) : Lense < A, C > return andThen(l1, l2) 
 }
+
+class LenseSyntactic {
+  
+  inline public static function set<A, B>(a : A, l : Lense<A, B>, v : B) : A return
+    l.set(v, a)
+
+  inline public static function get<A, B>(a : A, l : Lense<A, B>) : B return
+    l.get(a)
+   
+}
