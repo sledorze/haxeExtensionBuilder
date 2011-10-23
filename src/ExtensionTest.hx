@@ -4,7 +4,7 @@ package ;
  * ...
  * @author sledorze
  */
-import com.mindrocks.macros.ExtendsType;
+import com.mindrocks.macros.ExtendsMacro;
 import js.JQuery;
 
 class Foo<T, U> {
@@ -55,7 +55,7 @@ class TestFunExtension implements ExtendsType<Toto -> Void -> Tata> {
   @:native(val) public function valFun(f : Int -> Dynamic -> Dynamic) : JQuery;
 }
 
-
+/*
 class Future<T> {
   static public function create<T>(x : T) : Future<T>  { return null;  }
   public function bind<U>(f : T -> Future<U>) : Future<U> { return null;  }
@@ -73,7 +73,7 @@ class Fut2 {
 class Fut3 {
   public static function cc < A, B, C, R> (f : A -> B -> C -> (R -> Void) -> Void, a : A, b : B, c : C) : Future<R> { return null; }
 }
-
+*/
 
 using ExtensionTest;
 

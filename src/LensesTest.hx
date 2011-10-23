@@ -64,7 +64,7 @@ class LensesTest {
     
     function complexUserModification(user) {
       var newUser : User = Reflect.copy(user);
-      // do you stuff
+      // do you complex stuff
       return newUser;
     }
     
