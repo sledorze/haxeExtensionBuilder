@@ -20,13 +20,13 @@ class Toto {
   
 }
 
-class MyJQueryPluginExtension implements ExtendsType<JQuery> {
+class MyJQueryPluginExtension implements Extends<JQuery> {
   @:native(val) public function valGet() : Dynamic;
   @:native(val) public function valSet(x : Dynamic) : JQuery;
   @:native(val) public function valFun(f : Int -> Dynamic -> Dynamic) : JQuery;
 }
 
-class TestExtension implements ExtendsType<Foo<Toto, Tata>> {
+class TestExtension implements Extends<Foo<Toto, Tata>> {
   @:native(val) public function valGet() : Dynamic;
   @:native(val) public function valSet(x : Dynamic) : JQuery;
   @:native(val) public function valFun(f : Int -> Dynamic -> Dynamic) : JQuery;
@@ -37,19 +37,19 @@ typedef Joe = {
   toto : String
 }
 
-class TestTypedefExtension implements ExtendsType<Joe> {
+class TestTypedefExtension implements Extends<Joe> {
   @:native(val) public function valGet() : Dynamic;
   @:native(val) public function valSet<T>(x : T, cb : Int -> Void ) : Void;
   @:native(val) public function valFun(f : Int -> Dynamic -> Dynamic) : JQuery;
 }
 
-class TestStructExtension implements ExtendsType<{ tata : Int, toto : Array<String> -> Int -> { b : Bool, c : Int } }> {
+class TestStructExtension implements Extends<{ tata : Int, toto : Array<String> -> Int -> { b : Bool, c : Int } }> {
   @:native(val) public function valGet() : Dynamic;
   @:native(val) public function valSet(x : Dynamic) : JQuery;
   @:native(val) public function valFun(f : Int -> Dynamic -> Dynamic) : JQuery;
 }
 
-class TestFunExtension implements ExtendsType<Toto -> Void -> Tata> {
+class TestFunExtension implements Extends<Toto -> Void -> Tata> {
   @:native(val) public function valGet() : Dynamic;
   @:native(val) public function valSet(x : Dynamic) : JQuery;
   @:native(val) public function valFun(f : Int -> Dynamic -> Dynamic) : JQuery;

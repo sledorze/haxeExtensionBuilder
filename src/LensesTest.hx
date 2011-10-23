@@ -10,7 +10,9 @@ package ;
 import com.mindrocks.macros.Lense;
 using com.mindrocks.macros.Lense;
 
-import com.mindrocks.macros.LenseMacro;
+import com.mindrocks.macros.CacheMacro;
+
+import com.mindrocks.macros.LensesMacro;
 
 using Lambda;
 

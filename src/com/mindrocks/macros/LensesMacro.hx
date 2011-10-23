@@ -83,14 +83,13 @@ class Helper {
     
 }
 
-class LensesExtender<T> {
+class LensesMacro<T> {
 
   static var extensionClassName = "LensesFor";
   static function isExtension(el) return
     el.t.get().name == extensionClassName
 
   public static function build(): Array<Field> {
-    
     var extensionType = {
       var clazz : ClassType = Context.getLocalClass().get();
       clazz.interfaces.filter(isExtension).array()[0].params[0];
@@ -103,3 +102,5 @@ class LensesExtender<T> {
   }
 }
 #end
+
+@:autoBuild(com.mindrocks.macros.LensesMacro.build()) interface LensesFor<T> { } 
