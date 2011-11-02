@@ -10,16 +10,12 @@ import haxe.macro.Expr;
 using Lambda;
 using Std;
 
-class SubstMacro {
+class Stagged {
 
-  static function extractLookup(b : Expr) : Array<{ field : String, expr : Expr }> {
+  static function extractLookup(b : Expr) : Array<{ field : String, expr : Expr }> return {
     switch(b.expr) {
-      case EObjectDecl(fields):
-        for (field in fields) {
-          trace("Field " + Std.string(field));
-        }
-        return fields;
-      default : throw "not supported";
+      case EObjectDecl(fields): fields;
+      default : throw ("not supported" + Std.string(b.expr));
     }
   }
   
@@ -125,89 +121,48 @@ class SubstMacro {
         substitueComplexType(t, subs);
     }
   }
-  
+  /*
   @:macro public static function subs(exp : Expr, nameToExpressions : Expr) : Expr {
-    trace("Dynamic " + Std.string(nameToExpressions));
     substitueIn(exp, extractLookup(nameToExpressions));
     return exp;
   }
-  
-  @:macro public static function for3(init : Expr) : Expr {
-    
-    return subs({
-      function () {
-        return init(1);
-      }
-    }, { _m_init : init } );
-    
-  }    
-  
-  @:macro public static function for2(init : Expr, cond : Expr, body : Expr, change : Expr) : Expr {
-    
-    // "{$init; function loop () { if ($cond) { $body; $change; loop() } }; loop (); }"
-    return subs({
-      var i;
-      _m_init;
-      function loop () {
-        if (_m_cond) {
-          _m_body;
-          _m_change;
-          loop();
-        }
-      };
-      loop ();
-    }, { _m_init : init, _m_cond : cond, _m_body : body, _m_change : change } );
-    
-// a = StringTools.replace(a, "$myExpression", "_m_myExpression");    
-//    return Context.parse("com.mindrocks.macros.MetaMacro.moo("+a+", { _m_myExpression : myExpression })", Context.currentPos());
-//    return subs(Context.parse(a, Context.currentPos()), { _m_init : init, _m_cond : cond, _m_body : body, _m_change : change } );
-/*    return Context.parse(
-      "com.mindrocks.macros.SubstMacro.subs(" + a + ", { _m_init : init, _m_cond : cond, _m_body : body, _m_change : change })",
-      Context.currentPos()
-    );*/
-  }
-  /*
-  @:macro public static function mk(a : String) : Expr {
-    a = StringTools.replace(a, "$myExpression", "_m_myExpression"); TODO; implement the substitution..!!
-    return Context.parse("com.mindrocks.macros.MetaMacro.subs("+a+", { _m_myExpression : myExpression })", Context.currentPos());
-  }
   */
-}
+  
+  private static var mapping : Array<Dynamic> = [];
+  private static var staggedRes : Array<Expr> = [];
+  
+  public static function setMappings(m : Dynamic) {
+    mapping.push(m);
+  }
+  public static function getMappings() : Dynamic {
+    return mapping.pop();
+  }
 
+  public static function set(m : Expr) {
+    staggedRes.push(m);
+  }
+  public static function get() : Expr {
+    return staggedRes.pop();
+  }
 
-/*
-   @:macro public static function mk(a : String) : Expr {
-    
-    a = StringTools.replace(a, "$myExpression", "_m_myExpression");
-    
-    return Context.parse("com.mindrocks.macros.MetaMacro.subs("+a+", { _m_myExpression : myExpression })", Context.currentPos());
+  @:macro public static function make(exp : Expr) : Expr {
+    var arr = [];
+    var mapping = getMappings();
+    for (field in Reflect.fields(mapping)) {
+      arr.push( { field : field, expr : untyped Reflect.field(mapping, field) } );
+    }
+    substitueIn(exp, arr);
+    set(exp);
+    return { expr : EBlock([]), pos : exp.pos};
+  }
+
+  @:macro public static function stagged(code : String) : Expr {    
+    var identifiers = ["init", "cond", "inc", "body"];
+    var mappings = "Stagged.setMappings({ " + identifiers.map(function (str) return str + " : " + str).join(", ") + " });";
+    var newCode = identifiers.fold(function (id, code) return StringTools.replace(code, "$" + id, id), code);
+    var c = "{" + mappings + "Stagged.make( " + newCode + "); return Stagged.get(); }";
+    trace("out " + c );
+    return Context.parse(c, Context.currentPos());
   }
   
-  @:macro public static function for2(init : Expr, cond : Expr, body : Expr, change : Expr) : Expr {
-    
-    // "{$init; function loop () { if ($cond) { $body; $change; loop() } }; loop (); }"
-    var a = "{
-      var i;
-      _m_init;
-      function loop () {
-        if (_m_cond) {
-          _m_body;
-          _m_change;
-          loop();
-        }
-      };
-      loop ();
-    }";
-    
-    // a = StringTools.replace(a, "$myExpression", "_m_myExpression");
-    
-//    return Context.parse("com.mindrocks.macros.MetaMacro.moo("+a+", { _m_myExpression : myExpression })", Context.currentPos());
-//    return subs(Context.parse(a, Context.currentPos()), { _m_init : init, _m_cond : cond, _m_body : body, _m_change : change } );
-    return Context.parse(
-      "com.mindrocks.macros.MetaMacro.subs(" + a + ", { _m_init : init, _m_cond : cond, _m_body : body, _m_change : change })",
-      Context.currentPos()
-    );
-
-//    return Context.parse("com.mindrocks.macros.MetaMacro.moo("+a+", { _m_myExpression : myExpression })", Context.currentPos());
-  }
- */
+}
