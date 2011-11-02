@@ -156,13 +156,18 @@ class Stagged {
     return { expr : EBlock([]), pos : exp.pos};
   }
 
-  @:macro public static function stagged(code : String) : Expr {    
-    var identifiers = ["init", "cond", "inc", "body"];
+  @:macro public static function stagged(code : String) : Expr {
+    var r : EReg = ~/%[a-zA-Z0-9_-]+/;
+    var identifiers = [];
+    var newCode = 
+      r.customReplace(code, function (reg) {
+        var ident = reg.matched(0).substr(1);      
+        identifiers.push(ident);
+        return ident;
+      });
     var mappings = "Stagged.setMappings({ " + identifiers.map(function (str) return str + " : " + str).join(", ") + " });";
-    var newCode = identifiers.fold(function (id, code) return StringTools.replace(code, "$" + id, id), code);
-    var c = "{" + mappings + "Stagged.make( " + newCode + "); return Stagged.get(); }";
-    trace("out " + c );
-    return Context.parse(c, Context.currentPos());
+    var staggedCall = "{" + mappings + "Stagged.make( " + newCode + "); return Stagged.get(); }";
+    return Context.parse(staggedCall, Context.currentPos());
   }
   
 }

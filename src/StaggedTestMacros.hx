@@ -51,11 +51,11 @@ class StaggedTestMacros {
   @:macro public static function forExample2(init : Expr, cond : Expr, inc : Expr, body : Expr) : Expr return
     "{
       var i;
-      $init;
+      %init;
       function oneTime() {
-        if ($cond) {
-          $body;
-          $inc;
+        if (%cond) {
+          %body;
+          %inc;
           oneTime();
         }
       }
