@@ -108,12 +108,14 @@ class Stagged {
               for (sub in subs) {
                 if (sub.field == name) {
                   try {
-
+                    
                     var isExpr =
                       switch (sub.expr.typeof()) {
                         case TObject: sub.expr.expr != null && sub.expr.pos != null ; // great chance it's an Expr..
                         default: false;
                       };
+                    trace("sub.expr " + Std.string(sub.expr));
+                    trace("name " + name + ": " + isExpr);
                     
                     src.expr = isExpr?  sub.expr.expr : Context.makeExpr(sub.expr, src.pos).expr;
                     
@@ -213,8 +215,9 @@ class Stagged {
   public static var executeNext = true;
   @:macro public static function make(exp : Expr, id : Int) : Expr {
     var arr = [];  
-    for (field in Reflect.fields(getMappings())) {
-      arr.push( { field : field, expr : untyped Reflect.field(mapping, field) } );
+    var mappings = getMappings();
+    for (field in Reflect.fields(mappings)) {
+      arr.push( { field : field, expr : untyped Reflect.field(mappings, field) } );
     }
     
     substitueExp(exp, arr);
