@@ -238,7 +238,8 @@ class Stagged {
     var newCode =  /*TODO: no more need new code .. can remove that! */
       r.customReplace(code, function (reg) {
         var ident = reg.matched(0).substr(1);
-        identifiers.push(ident);
+        if (!identifiers.has(ident))
+          identifiers.push(ident);
         return ident;
       });
     
@@ -250,4 +251,5 @@ class Stagged {
   }
 
 }
+
 #end
