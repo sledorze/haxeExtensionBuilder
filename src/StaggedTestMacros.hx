@@ -2,8 +2,10 @@ package ;
 
 import com.mindrocks.macros.Stagged;
 using com.mindrocks.macros.Stagged;
-import haxe.macro.Context;
 import haxe.macro.Expr;
+import haxe.macro.Context;
+
+using Lambda;
 
 
 /**
@@ -13,7 +15,7 @@ import haxe.macro.Expr;
 
 class StaggedTestMacros {
 
-  
+  /*
   @:macro public static function testMeta(init : Expr) : Expr {
     Stagged.setMappings({
       init : init
@@ -47,18 +49,28 @@ class StaggedTestMacros {
     });
     return Stagged.get();
   }
-
-  @:macro public static function forExample2(init : Expr, cond : Expr, inc : Expr, body : Expr) : Expr return
-    "{
-      %init;
-      function oneTime() {
-        if (%cond) {
-          %body;
-          %inc;
+*/
+  @:macro public static function forExample2(init : Expr, cond : Expr, inc : Expr, body : Expr, nb : Int = 5) : Expr return {
+    
+    var arr = [];
+    for (ind in 0...5) {
+      var stagged =
+        Stagged.stagged("{
+          trace('i ' + $ind);
+          $init;
+          function oneTime() {
+            if ($cond) {
+              $body;
+              $inc;
+              oneTime();
+            }
+          }
           oneTime();
-        }
-      }
-      oneTime();
-    }".stagged()
+        }");
+      arr.push(stagged);
+    }
+    
+    return { expr : EBlock(arr), pos : Context.currentPos() };
+  }
   
 }
