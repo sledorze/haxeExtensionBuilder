@@ -114,8 +114,8 @@ class Stagged {
                         case TObject: sub.expr.expr != null && sub.expr.pos != null ; // great chance it's an Expr..
                         default: false;
                       };
-                    trace("sub.expr " + Std.string(sub.expr));
-                    trace("name " + name + ": " + isExpr);
+                    // trace("sub.expr " + Std.string(sub.expr));
+                    // trace("name " + name + ": " + isExpr);
                     
                     src.expr = isExpr?  sub.expr.expr : Context.makeExpr(sub.expr, src.pos).expr;
                     
@@ -251,5 +251,4 @@ class Stagged {
   }
 
 }
-
 #end

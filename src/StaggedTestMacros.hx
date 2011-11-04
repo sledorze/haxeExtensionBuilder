@@ -21,15 +21,16 @@ class StaggedTestMacros {
     for (ind in 0...5) {
       
       var localExpr =
-        Stagged.stagged("{
+        "{
           trace('wow' + $ind);
-        }");
+        }".stagged();
         
       arr.push(
-        Stagged.stagged("{
+        "{
           trace('i ' + $ind);
           $localExpr;
           $init;
+          
           function oneTime() {
             if ($cond) {
               $body;
@@ -38,7 +39,7 @@ class StaggedTestMacros {
             }
           }
           oneTime();
-        }")
+        }".stagged()
       );
     }
     
