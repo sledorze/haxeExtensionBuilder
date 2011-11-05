@@ -44,7 +44,6 @@ class JsonParser {
     { name : t.a, value : t.b }
   
   static var identifierR = ~/[a-zA-Z0-9_-]+/;
-
   
   static  var leftAccP = withSpacing("{".identifier());
   static  var rightAccP = withSpacing("}".identifier());
@@ -67,16 +66,17 @@ class JsonParser {
   static function withSpacing<T>(p : Void -> Parser<T>) return
     spacingP._and(p)
 
-  static var identifierP = withSpacing(identifierR.regex());
+  static var identifierP =
+    withSpacing(identifierR.regex());
 
   static var valueP =
-    identifierP.then(JsData).trace(function (x) return "valueP " + Std.string(x))().lazy();
+    identifierP.then(JsData)().lazy();
   
   static var jsonEntryP =
-    identifierP.and_(sepParP).and(valueOrJsonP).trace(function (x) return "jsonEntryP " + Std.string(x))().lazy();
+    identifierP.and_(sepParP).and(valueOrJsonP)().lazy();
     
   static  var jsonContentP =
-    jsonEntryP.repsep(commaParP).trace(function (x) return "jsonContentP " + Std.string(x))().lazy();
+    jsonEntryP.repsep(commaParP)().lazy();
   
   public static var jsonP =
     leftAccP._and(jsonContentP).and_(rightAccP).then(function (entries)
@@ -87,7 +87,7 @@ class JsonParser {
     leftBracketP._and(valueOrJsonP.repsep(commaParP)).and_(rightBracketP).then(JsArray)().lazy();
     
   static var valueOrJsonP : Void -> Parser<JsValue> =
-    [jsonP, valueP, jsonArrayP].ors().trace(function (x) return "valueOrJsonP " + Std.string(x))().lazy();
+    [jsonP, valueP, jsonArrayP].ors()().lazy();
 
 }
 

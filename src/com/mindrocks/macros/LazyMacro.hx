@@ -15,17 +15,32 @@ using com.mindrocks.macros.Stagged;
 class LazyMacro {
 
   @:macro public static function lazy(exp : Expr) : Expr return {
-    "
+    "{
+      var computed = false;
+      var value = null;
       function () return {
-        var computed = false;
-        var value = null;
         if (!computed) {
-          computed = true;
+          computed = true; // important to prevent exp evaluation to live lock if it forms a cycle.
           value = $exp;
         }
         value;
-      }
+      };
+    }
     ".stagged();
   }
   
+  @:macro public static function lazyF(exp : Expr) : Expr return {
+    "{
+      var computed = false;
+      var value = null;
+      function (x) return {
+        if (!computed) {
+          computed = true; // important to prevent exp evaluation to live lock if it forms a cycle.
+          value = $exp;
+        }
+        value(x);
+      };
+    }
+    ".stagged();
+  }
 }

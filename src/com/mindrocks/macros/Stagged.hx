@@ -77,23 +77,25 @@ class Stagged {
   }
 
   static function substitueComplexType(ct : ComplexType, subs : Array<{field : String, expr : Expr }>) {
-    switch (ct) {
-      case TPath(tp): substitueTypePath(tp, subs);
-      case TParent(t): substitueComplexType(t, subs);
-      case TFunction(args, ret):
-        for (arg in args) {
-          substitueComplexType(arg, subs);
-        }
-        substitueComplexType(ret, subs);
-      case TExtend(tp, fields):
-        substitueTypePath(tp, subs);
-        for (field in fields) {
-          substitueField(field, subs);
-        }
-      case TAnonymous(fields):
-        for (field in fields) {
-          substitueField(field, subs);
-        }
+    if (ct != null) {
+      switch (ct) {
+        case TPath(tp): substitueTypePath(tp, subs);
+        case TParent(t): substitueComplexType(t, subs);
+        case TFunction(args, ret):
+          for (arg in args) {
+            substitueComplexType(arg, subs);
+          }
+          substitueComplexType(ret, subs);
+        case TExtend(tp, fields):
+          substitueTypePath(tp, subs);
+          for (field in fields) {
+            substitueField(field, subs);
+          }
+        case TAnonymous(fields):
+          for (field in fields) {
+            substitueField(field, subs);
+          }
+      }
     }
   }
   
