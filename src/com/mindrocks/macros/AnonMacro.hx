@@ -9,7 +9,13 @@ import haxe.macro.Context;
 import haxe.macro.Expr;
 import haxe.macro.Type;
 
-#if macro
+import com.mindrocks.text.Parser;
+using com.mindrocks.text.Parser;
+
+import com.mindrocks.functional.Functional;
+using com.mindrocks.functional.Functional;
+
+//#if macro
 using Lambda;
 using Std;
 
@@ -17,10 +23,24 @@ enum Tree {
   TreeNode(name : String, sub : Array<Tree>);
   TreeValue(name : String, value : String);
 }
-#end
+/*
+class ArrayObject {
+  public static function equals<T>(t1 : Array<T>, t2 : Array<T>) return {
+    t1.
+  }
+}
+*/
+class TreeObject {
+  public static function equals(t1 : Tree, t2 : Tree) return {
+    Std.string(t1) == Std.string(t2); // LOL
+  }
+}
+
+
+//#end
 
 class AnonMacro {
-  #if macro
+//  #if macro
   
   static var isHaxeIdentifier = ~/[a-zA-Z0-9_-]+/;
   
@@ -54,12 +74,55 @@ class AnonMacro {
     
     var treeStack : Array<Array<Tree>> = [[]];
     
-    function addNode(tn : Tree) {
+    function addNode(tn : Tree)
       treeStack[treeStack.length - 1].push(tn);
-    }
-    function popNode() {
+    
+    function popNode()
       treeStack.pop();
-    }
+    
+    function splitClean(str : String, pattern : String) : List<String> return
+      str.split(pattern).map(StringTools.trim).filter(function (str) return str.length > 0); /*TODO: the place to optimize if requiered*/
+    
+    var forwardEntries = splitClean(str, "{");
+    for (fentry in forwardEntries) {
+      var backwardEntries = splitClean(fentry, "}");
+      
+      var x = backwardEntries.length;
+      for (bentry in backwardEntries) {
+        
+        var entries = splitClean(bentry, ",");
+        for (entry in entries ) {
+          var parts = splitClean(entry, ":").array();
+          
+          var name = parts[0];
+          var value : String = parts[1];
+          
+          if (value == null) {
+            var newChilds = [];
+            addNode(TreeNode(name, newChilds));
+            treeStack.push(newChilds);
+          } else {
+            addNode(TreeValue(name, value));
+          }
+        }
+        if (--x != 0) { // if not last          
+          popNode();
+        }
+      }
+    } 
+    TreeNode("root", treeStack[0]);
+  }
+
+  static function extractTree2(str : String) : Tree return {
+    
+    
+    var treeStack : Array<Array<Tree>> = [[]];
+    
+    function addNode(tn : Tree)
+      treeStack[treeStack.length - 1].push(tn);
+    
+    function popNode()
+      treeStack.pop();
     
     function splitClean(str : String, pattern : String) : List<String> return
       str.split(pattern).map(StringTools.trim).filter(function (str) return str.length > 0); /*TODO: the place to optimize if requiered*/
@@ -94,7 +157,7 @@ class AnonMacro {
     TreeNode("root", treeStack[0]);
   }
   
-  inline static function normalNodeGeneration(tree : Tree) return
+  static function normalNodeGeneration(tree : Tree) return
     treeName(tree) + " : " + generateCode(tree)
   
   inline static function otherNodeGeneration(tree : Tree) return 
@@ -117,10 +180,14 @@ class AnonMacro {
       case TreeValue(name, value) : value;
     }
   }
-  #end  
+  //#end  
 
   @:macro public static function anon(str : String) : Expr return {
-    var code = generateCode(extractTree(str));
+    var extract1 = extractTree(str);
+    var extract2 = extractTree2(str);
+    if (!TreeObject.equals(extract1, extract2))
+      throw "not equals";
+    var code = generateCode(extract2);
     trace("code " + code);
     Context.parse(code, Context.currentPos());
   }

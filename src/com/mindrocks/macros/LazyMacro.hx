@@ -33,12 +33,12 @@ class LazyMacro {
     "{
       var computed = false;
       var value = null;
-      function (x) return {
+      function () return {
         if (!computed) {
           computed = true; // important to prevent exp evaluation to live lock if it forms a cycle.
-          value = $exp;
+          value = $exp();
         }
-        value(x);
+        value;
       };
     }
     ".stagged();

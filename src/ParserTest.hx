@@ -70,24 +70,24 @@ class JsonParser {
     withSpacing(identifierR.regex());
 
   static var valueP =
-    identifierP.then(JsData)().lazy();
+    identifierP.then(JsData).lazyF();
   
   static var jsonEntryP =
-    identifierP.and_(sepParP).and(valueOrJsonP)().lazy();
+    identifierP.and_(sepParP).and(valueOrJsonP).lazyF();
     
   static  var jsonContentP =
-    jsonEntryP.repsep(commaParP)().lazy();
+    jsonEntryP.repsep(commaParP).lazyF();
   
   public static var jsonP =
     leftAccP._and(jsonContentP).and_(rightAccP).then(function (entries)
       return JsObject(entries.map(makeField).array())
-    )().lazy();
+    ).lazyF();
 
   static var jsonArrayP =
-    leftBracketP._and(valueOrJsonP.repsep(commaParP)).and_(rightBracketP).then(JsArray)().lazy();
+    leftBracketP._and(valueOrJsonP.repsep(commaParP)).and_(rightBracketP).then(JsArray).lazyF();
     
   static var valueOrJsonP : Void -> Parser<JsValue> =
-    [jsonP, valueP, jsonArrayP].ors()().lazy();
+    [jsonP, valueP, jsonArrayP].ors().lazyF();
 
 }
 
