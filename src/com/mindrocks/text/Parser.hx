@@ -144,7 +144,7 @@ class Parsers {
       }
     }).lazy()
 
-  public static function regex(r : EReg) : Void -> Parser<String> return
+  public static function regexParser(r : EReg) : Void -> Parser<String> return
     (function (input : String) return {
       if (r.match(input)) {
         var pos = r.matchedPos();

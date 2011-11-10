@@ -49,8 +49,8 @@ class JsonParser {
   static  var rightAccP = withSpacing("}".identifier());
   static  var leftBracketP = withSpacing("[".identifier());
   static  var rightBracketP = withSpacing("]".identifier());
-  static  var sepParP = withSpacing(":".identifier());
-  static  var commaParP = withSpacing(",".identifier());
+  static  var sepP = withSpacing(":".identifier());
+  static  var commaP = withSpacing(",".identifier());
   
   static  var spaceP = " ".identifier();    
   static  var tabP = "\t".identifier();
@@ -67,28 +67,27 @@ class JsonParser {
     spacingP._and(p)
 
   static var identifierP =
-    withSpacing(identifierR.regex());
+    withSpacing(identifierR.regexParser());
 
-  static var valueP =
+  static var jsonDataP =
     identifierP.then(JsData).lazyF();
-  
-  static var jsonEntryP =
-    identifierP.and_(sepParP).and(valueOrJsonP).lazyF();
     
-  static  var jsonContentP =
-    jsonEntryP.repsep(commaParP).lazyF();
+  static var jsonArrayP =
+    leftBracketP._and(jsonValueP.repsep(commaP)).and_(rightBracketP).then(JsArray).lazyF();
+    
+  static var jsonValueP : Void -> Parser<JsValue> =
+    [jsonParser, jsonDataP, jsonArrayP].ors().lazyF();
+
+  static var jsonEntryP =
+    identifierP.and_(sepP).and(jsonValueP).lazyF();
   
-  public static var jsonP =
-    leftAccP._and(jsonContentP).and_(rightAccP).then(function (entries)
+  static  var jsonEntriesP =
+    jsonEntryP.repsep(commaP).lazyF();
+
+  public static var jsonParser =
+    leftAccP._and(jsonEntriesP).and_(rightAccP).then(function (entries)
       return JsObject(entries.map(makeField).array())
     ).lazyF();
-
-  static var jsonArrayP =
-    leftBracketP._and(valueOrJsonP.repsep(commaParP)).and_(rightBracketP).then(JsArray).lazyF();
-    
-  static var valueOrJsonP : Void -> Parser<JsValue> =
-    [jsonP, valueP, jsonArrayP].ors().lazyF();
-
 }
 
 class ParserTest {
@@ -97,8 +96,7 @@ class ParserTest {
     try {
       
     var json = " {  aaa : aa, bbb : [cc, dd] } "; // , bbb : ccc } ";
-    JsonParser.jsonP();
-    switch (JsonParser.jsonP()(json)) {
+    switch (JsonParser.jsonParser()(json)) {
       case Success(res, rest):
         trace("Parsed " + JsonPrettyPrinter.prettify(res));
       case Failure(err): 

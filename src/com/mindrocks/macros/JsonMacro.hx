@@ -39,7 +39,7 @@ class TreeObject {
 
 //#end
 
-class AnonMacro {
+class JsonMacro {
 //  #if macro
   
   static var isHaxeIdentifier = ~/[a-zA-Z0-9_-]+/;
@@ -182,7 +182,7 @@ class AnonMacro {
   }
   //#end  
 
-  @:macro public static function anon(str : String) : Expr return {
+  @:macro public static function json(str : String) : Expr return {
     var extract1 = extractTree(str);
     var extract2 = extractTree2(str);
     if (!TreeObject.equals(extract1, extract2))
