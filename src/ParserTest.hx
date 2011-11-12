@@ -44,6 +44,17 @@ class JsonParser {
     { name : t.a, value : t.b }
   
   static var identifierR = ~/[a-zA-Z0-9_-]+/;
+
+  static  var spaceP = " ".identifier();    
+  static  var tabP = "\t".identifier();
+  static  var retP = ("\r".identifier().or("\n".identifier()));
+  
+  static  var spacingP =
+    [
+      spaceP.oneMany(),
+      tabP.oneMany(),
+      retP.oneMany()
+    ].ors().many().memo().lazyF();
   
   static  var leftAccP = withSpacing("{".identifier());
   static  var rightAccP = withSpacing("}".identifier());
@@ -52,16 +63,6 @@ class JsonParser {
   static  var sepP = withSpacing(":".identifier());
   static  var commaP = withSpacing(",".identifier());
   
-  static  var spaceP = " ".identifier();    
-  static  var tabP = "\t".identifier();
-  static  var retP = ("\r".identifier().or("\n".identifier()));
-  
-  static  function spacingP () return 
-    [
-      spaceP.oneMany(),
-      tabP.oneMany(),
-      retP.oneMany()
-    ].ors().many()()
   
   static function withSpacing<T>(p : Void -> Parser<T>) return
     spacingP._and(p)
@@ -90,25 +91,50 @@ class JsonParser {
     ).lazyF();
 }
 
+class LRTest {
+
+  static var posNumberR = ~/[0-9]+/;
+  
+  static var plusP = "+".identifier();
+  
+  static var posNumberP =
+    posNumberR.regexParser();
+    
+  public static var expr : Void -> Parser<String> = binop.or(posNumberP).memo().lazyF();
+  static var binop = expr.and_(plusP).andWith(expr, function (a, b) return a + " + " + b).lazyF();
+}
+
 class ParserTest {
 
-  public static function jsonTest() {
+  static function tryParse<T>(str : String, parser : Parser<T>, withResult : T -> Void) {
     try {
-      
-    var json = " {  aaa : aa, bbb : [cc, dd] } "; // , bbb : ccc } ";
-    switch (JsonParser.jsonParser()(json.reader())) {
-      case Success(res, rest):
-        trace("Parsed " + JsonPrettyPrinter.prettify(res));
-      case Failure(err):
-        err.map(function (err) {
-          trace("Error at " + err.pos + " : " + err.msg);
-        });        
-     }
-     
+      switch (parser(str.reader())) {
+        case Success(res, rest):
+          withResult(res);
+        case Failure(err):
+          err.map(function (err) {
+            trace("Error at " + err.pos + " : " + err.msg);
+          });        
+      }     
     } catch (e : Dynamic) {
-    //  trace("Error " + Std.string(e));
-    }
-    
+      trace("Error " + Std.string(e));
+    }    
+  }
+  
+  public static function jsonTest() {
+
+    tryParse(
+      " {  aaa : aa, bbb : [cc, dd] } ", // , bbb : ccc } ";
+      JsonParser.jsonParser(),
+      function (res) trace("Parsed " + JsonPrettyPrinter.prettify(res))
+    );
+    /*
+    tryParse(
+      "5+3",
+      LRTest.expr(),
+      function (res) trace("Parsed " + res)
+    );
+    */
   }
   
 }

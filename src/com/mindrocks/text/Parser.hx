@@ -15,7 +15,36 @@ using com.mindrocks.macros.LazyMacro;
 
 typedef Reader = {
   content : String,
-  offset : Int
+  offset : Int,
+  memo : Memo
+}
+
+typedef Memo = {
+  memoEntry : Hash<MemoEntry>,
+}
+
+enum MemoEntry {
+  Parsed(ans : ParseResult<Dynamic>);
+}
+
+typedef MemoKey = String
+
+class MemoObj {
+  inline public static function result<T>(m : MemoEntry) : ParseResult<T> {
+    return 
+      switch (m) {
+        case Parsed(ans) : untyped ans;
+      }
+  }
+  
+  inline public static function forKey(m : Memo, key : MemoKey) : Option<MemoEntry> {
+    var value = m.memoEntry.get(key);
+    if (value == null) { // TODO: toOption()
+      return None;
+    } else {
+      return Some(value);
+    }
+  }
 }
 
 class ReaderObj {
@@ -25,7 +54,10 @@ class ReaderObj {
   
   inline public static function reader(str : String) : Input return {
     content : str,
-    offset : 0
+    offset : 0,
+    memo : {
+      memoEntry : new Hash<MemoEntry>()
+    }
   }
   
   inline public static function take(r : Input, len : Int) : String {
@@ -35,7 +67,8 @@ class ReaderObj {
   inline public static function drop(r : Input, len : Int) : Input {
     return {
       content : r.content,
-      offset : r.offset + len
+      offset : r.offset + len,
+      memo  : r.memo
     };
   }
   
@@ -91,8 +124,33 @@ typedef Parser<T> = Input -> ParseResult<T>
 
 class Parsers {
 
+  static var _parserUid = 0;
+  static function parserUid() {
+    return ++_parserUid;  
+  }
+  
+  public static function memo<T>(p : Void -> Parser<T>) : Void -> Parser<T> {
+    return ({
+      // generates an uid for this parser.
+      var uidPrefix = parserUid()+"@";
+      var _p1 = p().lazy();
+      function (input :Input) {
+        var memoKey = uidPrefix + input.position();
+     
+        switch (input.memo.forKey(memoKey)) {
+          case None:
+            var res = _p1()(input);
+            input.memo.memoEntry.set(memoKey, Parsed(res));
+            return res;
+          case Some(res):
+            return res.result();
+        }
+      };
+    }).lazy();    
+  }
+  
   public static function fail<T>(error : String) : Void -> Parser <T> return
-  (function (input :Input) return Failure("error".errorAt(input).newStack())).lazy()
+    (function (input :Input) return Failure("error".errorAt(input).newStack())).lazy()
 
   public static function success<T>(v : T) : Void -> Parser <T> return
     (function (input) return Success(v, input)).lazy()
