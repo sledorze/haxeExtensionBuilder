@@ -13,8 +13,8 @@ using com.mindrocks.functional.Functional;
 
 using com.mindrocks.macros.LazyMacro;
 
-using Lambda;
- 
+using Lambda; 
+
 typedef JsEntry = { name : String, value : JsValue}
 enum JsValue {
   JsObject(fields : Array<JsEntry>);
@@ -96,7 +96,7 @@ class ParserTest {
     try {
       
     var json = " {  aaa : aa, bbb : [cc, dd] } "; // , bbb : ccc } ";
-    switch (JsonParser.jsonParser()(json)) {
+    switch (JsonParser.jsonParser()(json.reader())) {
       case Success(res, rest):
         trace("Parsed " + JsonPrettyPrinter.prettify(res));
       case Failure(err): 

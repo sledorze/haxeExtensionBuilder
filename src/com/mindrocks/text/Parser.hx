@@ -3,7 +3,7 @@ package com.mindrocks.text;
 import com.mindrocks.functional.Functional;
 using com.mindrocks.functional.Functional;
 
-using StringTools;
+// using StringTools;
 using Lambda;
 
 using com.mindrocks.macros.LazyMacro;
@@ -13,11 +13,57 @@ using com.mindrocks.macros.LazyMacro;
  * @author sledorze
  */
 
+// typedef Input = String
+typedef Reader = {
+  content : String,
+  offset : Int
+  // add offset and drop, etc..
+}
+typedef Input = Reader
+
+class ReaderObj {
+  
+  inline public static function reader(str : String) : Input return {
+    content : str,
+    offset : 0
+  }
+  
+  inline public static function take(r : Input, len : Int) : String {
+    return r.content.substr(r.offset, len);
+  }
+  
+  inline public static function drop(r : Input, len : Int) : Input {
+    return {
+      content : r.content,
+      offset : r.offset + len
+    };
+  }
+  
+  inline public static function startsWith(r : Input, x : String) : Bool {
+    return r.content.substr(r.offset, x.length) == x;
+  }
+  
+  inline public static function matchedBy(r : Input, e : EReg) : Bool {
+    return e.match(str(r));
+  }
+  
+  inline public static function str(r : Input) : String {
+    if (r.offset == 0) {
+      return r.content;
+    } else {
+      var newStr = r.content.substr(r.offset);
+      r.content = newStr;
+      r.offset = 0;
+      return newStr;      
+    }
+  }
+}
+using com.mindrocks.text.Parser; 
+
 enum ParseResult<T> {
-  Success(match : T, rest : String);
+  Success(match : T, rest : Input);
   Failure(error : String);
 }
-typedef Input = String
 typedef Parser<T> = Input -> ParseResult<T>
 
 
@@ -135,9 +181,9 @@ class Parsers {
     then(p, function (x) return { trace(f(x)); x;} )
 
   public static function identifier(x : String) : Void -> Parser<String> return
-    (function (input : String) return {
+    (function (input : Input) return {
       if (input.startsWith(x)) {
-        var rest = input.substr(x.length);
+        var rest = input.drop(x.length);
         Success(x, rest);
       } else {
         Failure(x + " expected and not found");
@@ -145,11 +191,11 @@ class Parsers {
     }).lazy()
 
   public static function regexParser(r : EReg) : Void -> Parser<String> return
-    (function (input : String) return {
-      if (r.match(input)) {
+    (function (input : Input) return {
+      if (input.matchedBy(r)) {
         var pos = r.matchedPos();
         if (pos.pos == 0) {
-          Success(input.substr(0, pos.len), input.substr(pos.len));
+          Success(input.take(pos.len), input.drop(pos.len));
         } else {
           Failure(r + " not matched at beginning");
         }
@@ -159,7 +205,7 @@ class Parsers {
     }).lazy()
 
   public static function withError<T>(p : Parser<T>, f : String -> String ) : Void -> Parser<T> return  
-    (function (input : String) return {
+    (function (input : Input) return {
       var r = p(input);
       switch(r) {
         case Failure(err): Failure(f(err));
