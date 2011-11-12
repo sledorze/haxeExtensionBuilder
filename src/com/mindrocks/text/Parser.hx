@@ -40,25 +40,23 @@ class ReaderObj {
   }
   
   inline public static function startsWith(r : Input, x : String) : Bool {
-    return r.content.substr(r.offset, x.length) == x;
+    return take(r, x.length) == x;
   }
   
-  inline public static function matchedBy(r : Input, e : EReg) : Bool {
-    return e.match(str(r));
+  inline public static function matchedBy(r : Input, e : EReg) : Bool { // this is deadly unfortunate that RegEx don't support offset and first char maching constraint..
+    return e.match(rest(r));
   }
   
-  inline public static function str(r : Input) : String {
+  inline static function rest(r : Input) : String {
     if (r.offset == 0) {
       return r.content;
     } else {
-      var newStr = r.content.substr(r.offset);
-      r.content = newStr;
-      r.offset = 0;
-      return newStr;      
+      return r.content.substr(r.offset);
     }
   }
 }
 using com.mindrocks.text.Parser; 
+
 
 enum ParseResult<T> {
   Success(match : T, rest : Input);
