@@ -78,15 +78,19 @@ class Parsers {
   public static function identity<T>(p : Void -> Parser<T>) : Void -> Parser <T> return p
 
   public static function andWith < T, U, V > (p1 : Void -> Parser<T>, p2 : Void -> Parser<U>, f : T -> U -> V) : Void -> Parser <V> return
-    (function (input) return {
-      switch (p1()(input)) {
-        case Success(m1, r) :
-          switch (p2()(r)) {
-            case Success(m2, r) : Success(f(m1, m2), r);
-            case Failure(err) : Failure(err);
-          }
-        case Failure(err) : Failure(err);
-      }
+    ({
+      var _p1 = p1().lazy(); // evaluated once for all
+      var _p2 = p2().lazy(); // evaluated once for all
+      function (input) return {
+        switch (_p1()(input)) {
+          case Success(m1, r) :
+            switch (_p2()(r)) {
+              case Success(m2, r) : Success(f(m1, m2), r);
+              case Failure(err) : Failure(err);
+            }
+          case Failure(err) : Failure(err);
+        }
+      };
     }).lazy()
 
   inline public static function and < T, U > (p1 : Void -> Parser<T>, p2 : Void -> Parser<U>) : Void -> Parser < Tuple2 < T, U >> return
@@ -100,31 +104,40 @@ class Parsers {
 
   // aka flatmap
   public static function andThen < T, U > (p1 : Void -> Parser<T>, fp2 : T -> (Void -> Parser<U>)) : Void -> Parser < U > return
-    (function (input) return {
-        switch (p1()(input)) {
+    ( {
+      var _p1 = p1().lazy();
+      function (input) return {
+        switch (_p1()(input)) {
           case Success(m, r): fp2(m)()(r);
           case Failure(err): Failure(err);
         }
       }
-    ).lazy()
+    }).lazy()
 
   // map
   public static function then < T, U > (p1 : Void -> Parser<T>, f : T -> U) : Void -> Parser < U > return
-    (function (input) return {
-      switch (p1()(input)) {
+    ({
+      var _p1 = p1().lazy();
+      function (input) return {
+      switch (_p1()(input)) {
         case Success(m, r): Success(f(m), r);
         case Failure(err): Failure(err);
       }
+    }
     }).lazy()
 
   public static function filter<T>(p : Void -> Parser<T>, pred : T -> Bool) : Void -> Parser <T> return
     andThen(p, function (x) return pred(x) ? success(x) : fail("not matched"))
   
   public static function or < T > (p1 : Void -> Parser<T>, p2 : Void -> Parser<T>) : Void -> Parser < T > return
-    (function (input) return {
-      switch (p1()(input)) {
-        case Success(m, r) : Success(m, r);
-        case Failure(err) : p2()(input);
+    ({
+      var _p1 = p1().lazy();
+      var _p2 = p2().lazy();
+      function (input) return {
+        switch (_p1()(input)) {
+          case Success(m, r) : Success(m, r);
+          case Failure(err) : _p2()(input);
+        }
       }
     }).lazy()
     
@@ -170,11 +183,14 @@ class Parsers {
    * 0..1
    */
   public static function option < T > (p1 : Void -> Parser<T>) : Void -> Parser < Option<T> > return
-    (function (input) return {
-      switch (p1()(input)) {
+    ( {
+      var _p1 = p1().lazy();
+      function (input) return {
+      switch (_p1()(input)) {
         case Failure(err) : Success(None, input);
         case Success(m, r) : Success(Some(m), r);
       }
+    }
     }).lazy()
 
   public static function trace<T>(p : Void -> Parser<T>, f : T -> String) : Void -> Parser<T> return
