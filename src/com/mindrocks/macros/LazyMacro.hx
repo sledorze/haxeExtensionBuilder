@@ -14,31 +14,31 @@ using com.mindrocks.macros.Stagged;
 
 class LazyMacro {
 
+  public static var computing = new Array<Dynamic>();
+  
   @:macro public static function lazy(exp : Expr) : Expr return {
-    "{
-      var computed = false;
+    "function(){
       var value = null;
-      function () return {
-        if (!computed) {
-          computed = true; // important to prevent exp evaluation to live lock if it forms a cycle.
+      return function () {        
+        if (value == null) {
+          value = untyped 1; // not null to prevent live lock if it forms a cycle.
           value = $exp;
         }
-        value;
+        return value;
       };
-    }
+    }()
     ".stagged();
   }
-  
+
   @:macro public static function lazyF(exp : Expr) : Expr return {
     "{
-      var computed = false;
       var value = null;
-      function () return {
-        if (!computed) {
-          computed = true; // important to prevent exp evaluation to live lock if it forms a cycle.
+      function () {
+        if (value == null) {
+          value = untyped 1; // not null to prevent live lock if it forms a cycle.
           value = $exp();
         }
-        value;
+        return value;
       };
     }
     ".stagged();
