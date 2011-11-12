@@ -13,15 +13,15 @@ using com.mindrocks.macros.LazyMacro;
  * @author sledorze
  */
 
-// typedef Input = String
 typedef Reader = {
   content : String,
   offset : Int
-  // add offset and drop, etc..
 }
-typedef Input = Reader
 
 class ReaderObj {
+  
+  inline public static function position(r : Input) : Int return
+    r.offset
   
   inline public static function reader(str : String) : Input return {
     content : str,
@@ -55,12 +55,36 @@ class ReaderObj {
     }
   }
 }
+
+class FailureObj {
+  public static function newStack(failure : FailureMsg) : FailureStack {
+    var newStack = FailureStack.nil();
+    return newStack.cons(failure);
+  }
+  public static function errorAt(msg : String, pos : Input) : FailureMsg {
+    return {
+      msg : msg,
+      pos : pos.offset      
+    };
+  }
+  public static function report(stack : FailureStack, msg : FailureMsg) : FailureStack {
+    return stack.cons(msg);
+  }
+}
+
 using com.mindrocks.text.Parser; 
 
 
+typedef Input = Reader
+typedef FailureStack = haxe.data.collections.List<FailureMsg>
+typedef FailureMsg = {
+  msg : String,
+  pos : Int
+}
+
 enum ParseResult<T> {
   Success(match : T, rest : Input);
-  Failure(error : String);
+  Failure(errorStack : FailureStack);
 }
 typedef Parser<T> = Input -> ParseResult<T>
 
@@ -68,7 +92,7 @@ typedef Parser<T> = Input -> ParseResult<T>
 class Parsers {
 
   public static function fail<T>(error : String) : Void -> Parser <T> return
-    (function (input) return Failure(error)).lazy()
+  (function (input :Input) return Failure("error".errorAt(input).newStack())).lazy()
 
   public static function success<T>(v : T) : Void -> Parser <T> return
     (function (input) return Success(v, input)).lazy()
@@ -199,7 +223,7 @@ class Parsers {
       if (input.startsWith(x)) {
         return Success(x, input.drop(x.length));
       } else {
-        return Failure(x + " expected and not found");
+        return Failure((x + " expected and not found").errorAt(input).newStack());
       }
     ).lazy()
 
@@ -210,10 +234,10 @@ class Parsers {
         if (pos.pos == 0) {
           Success(input.take(pos.len), input.drop(pos.len));
         } else {
-          Failure(r + " not matched at beginning");
+          Failure((r + " not matched at beginning").errorAt(input).newStack());
         }
       } else {
-        Failure(r + " not matched");
+        Failure((r + " not matched").errorAt(input).newStack());
       }
     ).lazy()
 
@@ -221,7 +245,7 @@ class Parsers {
     (function (input : Input) {
       var r = p(input);
       switch(r) {
-        case Failure(err): return Failure(f(err));
+        case Failure(err): return Failure(err.report((f(err.head.msg)).errorAt(input)));
         default: return r;
       }
     }).lazy()

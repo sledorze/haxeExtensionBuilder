@@ -99,8 +99,10 @@ class ParserTest {
     switch (JsonParser.jsonParser()(json.reader())) {
       case Success(res, rest):
         trace("Parsed " + JsonPrettyPrinter.prettify(res));
-      case Failure(err): 
-        trace("parse error " + err);
+      case Failure(err):
+        err.map(function (err) {
+          trace("Error at " + err.pos + " : " + err.msg);
+        });        
      }
      
     } catch (e : Dynamic) {
