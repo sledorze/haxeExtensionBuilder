@@ -98,10 +98,10 @@ class LRTest {
   static var plusP = "+".identifier();
   
   static var posNumberP =
-    posNumberR.regexParser();
+    posNumberR.regexParser().lazyF().memo().lazyF();
     
-  public static var expr : Void -> Parser<String> = binop.or(posNumberP).memo().lazyF();
-  static var binop = expr.and_(plusP).andWith(expr, function (a, b) return a + " + " + b).memo().lazyF();
+  static var binop = expr.and_(plusP).andWith(expr, function (a, b) return a + " + " + b).lazyF().memo().lazyF();
+  public static var expr : Void -> Parser<String> = binop.or(posNumberP).lazyF().memo().lazyF();
 }
 
 class ParserTest {
@@ -113,6 +113,7 @@ class ParserTest {
           withResult(res);
         case Failure(err, rest):
           err.map(function (err) {
+            trace("Error..");
             trace("Error at " + err.pos + " : " + err.msg);
           });        
       }     

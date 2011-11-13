@@ -68,6 +68,12 @@ class MemoObj {
       case Success(_, rest) : return rest;
       case Failure(_, rest) : return rest;
     }
+    
+  public static function matchFromResult<T>(p : ParseResult<T>) 
+    switch (p) {
+      case Success(x, _) : return Std.string(x);
+      case Failure(_, _) : return "";
+    }
   
   inline public static function result<T>(m : MemoEntry) : ParseResult<T> {
     return 
@@ -222,13 +228,19 @@ class Parsers {
     switch (growable.head) {
       case None: throw "lrAnswer with no head!!";
       case Some(head): 
-        if(head.getHead() != p()) /*not head rule, so not growing*/
-          return untyped growable.seed;
-        else {
+        if (head.getHead() != p()) /*not head rule, so not growing*/{
+          //trace(" head.getHead() != p() ");
+          return untyped growable.seed;          
+        } else {
+          //trace(" head.getHead() == p() ");
           input.updateCacheAndGet(genKey, MemoParsed(growable.seed));
           switch (growable.seed) {
-            case Failure(_, _) : return untyped growable.seed;
-            case Success(_, _) : return untyped grow(p, genKey, input, head); /*growing*/ 
+            case Failure(_, _) :
+              //trace("failure");
+              return untyped growable.seed;
+            case Success(_, _) :
+              //trace("grow");
+              return untyped grow(p, genKey, input, head); /*growing*/ 
           }
         }
     }
@@ -238,21 +250,21 @@ class Parsers {
     var cached = input.getFromCache(genKey);
     switch (input.getRecursionHead()) {
       case None:
-        trace("none");
+        //trace("none");
         return cached;
       case Some(head):
-        trace("head");
+        //trace("head");
         if (cached == None && !(head.involvedSet.cons(head.headParser).contains(p()))) {
-          trace("yop");
+          //trace("yop");
           return Some(MemoParsed(Failure("dummy ".errorAt(input).newStack(), input)));
         }
           
         if (head.evalSet.contains(p())) {
-          trace("found");
+          //trace("found");
           head.evalSet = head.evalSet.filter(function (x) return x != p());
           
           var memo = MemoParsed(p()(input));          
-          input.updateCacheAndGet(genKey, memo);
+          input.updateCacheAndGet(genKey, memo); // beware; it won't update lrStack !!! Check that !!!
           cached = Some(memo);
         }
         return cached;
@@ -267,7 +279,7 @@ class Parsers {
     stack.takeWhile(function (lr) return lr.rule() != p()).map(function (x) {
       x.head = recDetect.head;
       switch (recDetect.head) {
-        case Some(h):  h.involvedSet.cons(x.rule());
+        case Some(h):  h.involvedSet = h.involvedSet.cons(x.rule());
         default:
       }
     });    
@@ -287,11 +299,16 @@ class Parsers {
     head.evalSet = head.involvedSet;
     var res = p()(rest);
     switch (res) {
-      case Success(_,_) :
-        if(oldRes.posFromResult().offset < res.posFromResult().offset ) {
+      case Success(_, _) :
+        //trace("res " + oldRes.matchFromResult() + " " + res.matchFromResult());
+        //trace("pos " + oldRes.posFromResult().offset + " " + res.posFromResult().offset);
+        
+        if (oldRes.posFromResult().offset < res.posFromResult().offset ) {
+          //trace("inferior");
           rest.updateCacheAndGet(genKey, MemoParsed(res));
           return grow(p, genKey, rest, head);
         } else {
+          //trace("not inferior");
           //we're done with growing, we can remove data from recursion head
           rest.removeRecursionHead();
           switch (rest.getFromCache(genKey).get()) {
@@ -300,6 +317,7 @@ class Parsers {
           }
         }
       default :
+        //trace("default");
         rest.removeRecursionHead();
       /*rest.updateCacheAndGet(p, MemoEntry(Right(f)));*/
         return untyped oldRes;
@@ -316,33 +334,36 @@ class Parsers {
         
         switch (recall(_p1, genKey, input)) {
           case None :
-          //  trace("none");
             var base = Failure("Base Failure".errorAt(input).newStack(), input).mkLR(_p1, None);
             
             input.memo.lrStack  = input.memo.lrStack.cons(base);
             input.updateCacheAndGet(genKey, MemoLR(base));
+            //trace("add base failure");
             
             var res = _p1()(input);
             
-            input.memo.lrStack  = input.memo.lrStack.tail;
+            //trace("remove base failure");
+            input.memo.lrStack = input.memo.lrStack.tail;
             
             switch (base.head) {
               case None:
+                //trace("base.head is None");
                 input.updateCacheAndGet(genKey, MemoParsed(res));
                 return res;
               case Some(_):
+                //trace("base.head is Some");
                 base.seed = res;
                 return lrAnswer(_p1, genKey, input, base);
             }
             
-          case Some(mEntry):
-            trace("entry");
-            
+          case Some(mEntry):            
             switch(mEntry) {
               case  MemoLR(recDetect):
+                //trace("MemoLR");
                 setupLR(_p1, input, recDetect);
                 return untyped recDetect.seed;
               case  MemoParsed(ans):
+                //trace("Parsed " + ans);
                 return untyped ans;
             }
         }
