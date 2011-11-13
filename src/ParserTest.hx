@@ -54,7 +54,7 @@ class JsonParser {
       spaceP.oneMany(),
       tabP.oneMany(),
       retP.oneMany()
-    ].ors().many().memo().lazyF();
+    ].ors().many().lazyF();
   
   static  var leftAccP = withSpacing("{".identifier());
   static  var rightAccP = withSpacing("}".identifier());
@@ -101,7 +101,7 @@ class LRTest {
     posNumberR.regexParser();
     
   public static var expr : Void -> Parser<String> = binop.or(posNumberP).memo().lazyF();
-  static var binop = expr.and_(plusP).andWith(expr, function (a, b) return a + " + " + b).lazyF();
+  static var binop = expr.and_(plusP).andWith(expr, function (a, b) return a + " + " + b).memo().lazyF();
 }
 
 class ParserTest {
@@ -111,7 +111,7 @@ class ParserTest {
       switch (parser(str.reader())) {
         case Success(res, rest):
           withResult(res);
-        case Failure(err):
+        case Failure(err, rest):
           err.map(function (err) {
             trace("Error at " + err.pos + " : " + err.msg);
           });        
@@ -128,13 +128,13 @@ class ParserTest {
       JsonParser.jsonParser(),
       function (res) trace("Parsed " + JsonPrettyPrinter.prettify(res))
     );
-    /*
+    
     tryParse(
       "5+3",
       LRTest.expr(),
       function (res) trace("Parsed " + res)
     );
-    */
+    
   }
   
 }

@@ -18,7 +18,14 @@ enum Option<T> {
 
 typedef Lazy<T> = Void -> T
 
+
 class Functionnal {
+
+  public static function get<T>(o : Option<T>) : T
+    switch(o) {
+      case Some(x) : return x;
+      default : throw "Error Option get on None";
+    }
   
   public static function lazzy<T>(f : Void -> T) : Lazy<T> return {
     var value = null;
