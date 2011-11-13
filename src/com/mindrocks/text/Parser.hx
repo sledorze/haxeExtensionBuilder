@@ -2,14 +2,10 @@ package com.mindrocks.text;
 
 import com.mindrocks.functional.Functional;
 using com.mindrocks.functional.Functional;
-//import Prelude;
-// using PreludeExtensions;
 
-// using StringTools;
+
 using Lambda;
-import haxe.data.collections.List;
-using haxe.functional.FoldableExtensions;
-
+import haxe.data.collections.List; // reimplement minimal version.
 
 using com.mindrocks.macros.LazyMacro;
 
@@ -184,7 +180,7 @@ class PackRat<T> {
 
 typedef LR = {
   seed: ParseResult<Dynamic>,
-  rule: Void -> Parser<Dynamic>,
+  rule: Parser<Dynamic>,
   head: Option<Head>
 }
 
@@ -196,7 +192,7 @@ typedef Head = {
 
 class Parsers {
 
-  public static function mkLR<T>(seed: ParseResult<Dynamic>, rule: Void -> Parser<T>, head: Option<Head>) : LR return {
+  public static function mkLR<T>(seed: ParseResult<Dynamic>, rule: Parser<T>, head: Option<Head>) : LR return {
     seed: seed,
     rule: untyped rule,
     head: head
@@ -224,11 +220,11 @@ class Parsers {
   }
   
   
-  static function lrAnswer<T>(p: Void -> Parser<T>, genKey : Int -> String, input: Reader, growable: LR): ParseResult<T> {
+  static function lrAnswer<T>(p: Parser<T>, genKey : Int -> String, input: Reader, growable: LR): ParseResult<T> {
     switch (growable.head) {
       case None: throw "lrAnswer with no head!!";
       case Some(head): 
-        if (head.getHead() != p()) /*not head rule, so not growing*/{
+        if (head.getHead() != p) /*not head rule, so not growing*/{
           //trace(" head.getHead() != p() ");
           return untyped growable.seed;          
         } else {
@@ -246,24 +242,18 @@ class Parsers {
     }
   }
   
-  static function recall<T>(p : Void -> Parser<T>, genKey : Int -> String, input : Reader) : Option<MemoEntry> {
+  static function recall<T>(p : Parser<T>, genKey : Int -> String, input : Reader) : Option<MemoEntry> {
     var cached = input.getFromCache(genKey);
     switch (input.getRecursionHead()) {
-      case None:
-        //trace("none");
-        return cached;
+      case None: return cached;
       case Some(head):
-        //trace("head");
-        if (cached == None && !(head.involvedSet.cons(head.headParser).contains(p()))) {
-          //trace("yop");
+        if (cached == None && !(head.involvedSet.cons(head.headParser).contains(p))) {
           return Some(MemoParsed(Failure("dummy ".errorAt(input).newStack(), input)));
-        }
+        }          
+        if (head.evalSet.contains(p)) {
+          head.evalSet = head.evalSet.filter(function (x) return x != p);
           
-        if (head.evalSet.contains(p())) {
-          //trace("found");
-          head.evalSet = head.evalSet.filter(function (x) return x != p());
-          
-          var memo = MemoParsed(p()(input));          
+          var memo = MemoParsed(p(input));
           input.updateCacheAndGet(genKey, memo); // beware; it won't update lrStack !!! Check that !!!
           cached = Some(memo);
         }
@@ -271,21 +261,31 @@ class Parsers {
     }
   }
   
-  static function setupLR(p: Void -> Parser<Dynamic>, input: Reader, recDetect: LR) {
+  static function setupLR(p: Parser<Dynamic>, input: Reader, recDetect: LR) {
     if (recDetect.head == None)
-      recDetect.head = Some(p().mkHead());
+      recDetect.head = Some(p.mkHead());
     
     var stack = input.memo.lrStack;
-    stack.takeWhile(function (lr) return lr.rule() != p()).map(function (x) {
+
+    var h = recDetect.head.get(); // valid (see above)
+    while (stack.head.rule != p) {
+      var head = stack.head;
+      head.head = recDetect.head;
+      h.involvedSet = h.involvedSet.cons(head.rule);
+      stack = stack.tail;
+    }
+/*
+    stack.takeWhile(function (lr) return lr.rule != p).map(function (x) {
       x.head = recDetect.head;
       switch (recDetect.head) {
-        case Some(h):  h.involvedSet = h.involvedSet.cons(x.rule());
+        case Some(h):  h.involvedSet = h.involvedSet.cons(x.rule);
         default:
       }
     });    
+    */
   }
   
-  static function grow<T>(p: Void -> Parser<T>, genKey : Int -> String, rest: Reader, head: Head): ParseResult<T> {
+  static function grow<T>(p: Parser<T>, genKey : Int -> String, rest: Reader, head: Head): ParseResult<T> {
     //store the head into the recursionHeads
     rest.setRecursionHead(head);
     var oldRes =
@@ -297,7 +297,7 @@ class Parsers {
     //resetting the evalSet of the head of the recursion at each beginning of growth
     
     head.evalSet = head.involvedSet;
-    var res = p()(rest);
+    var res = p(rest);
     switch (res) {
       case Success(_, _) :
         //trace("res " + oldRes.matchFromResult() + " " + res.matchFromResult());
@@ -332,9 +332,9 @@ class Parsers {
       var _p1 = _p().lazy();
       function (input :Input) {
         
-        switch (recall(_p1, genKey, input)) {
+        switch (recall(_p1(), genKey, input)) {
           case None :
-            var base = Failure("Base Failure".errorAt(input).newStack(), input).mkLR(_p1, None);
+            var base = Failure("Base Failure".errorAt(input).newStack(), input).mkLR(_p1(), None);
             
             input.memo.lrStack  = input.memo.lrStack.cons(base);
             input.updateCacheAndGet(genKey, MemoLR(base));
@@ -353,14 +353,14 @@ class Parsers {
               case Some(_):
                 //trace("base.head is Some");
                 base.seed = res;
-                return lrAnswer(_p1, genKey, input, base);
+                return lrAnswer(_p1(), genKey, input, base);
             }
             
           case Some(mEntry):            
             switch(mEntry) {
               case  MemoLR(recDetect):
                 //trace("MemoLR");
-                setupLR(_p1, input, recDetect);
+                setupLR(_p1(), input, recDetect);
                 return untyped recDetect.seed;
               case  MemoParsed(ans):
                 //trace("Parsed " + ans);
