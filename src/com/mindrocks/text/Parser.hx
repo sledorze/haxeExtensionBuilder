@@ -7,6 +7,7 @@ using com.mindrocks.functional.Functional;
 using Lambda;
 import haxe.data.collections.List; // reimplement minimal version.
 
+
 using com.mindrocks.macros.LazyMacro;
 
 /**
@@ -86,7 +87,7 @@ class MemoObj {
   
   inline public static function forKey(m : Memo, key : MemoKey) : Option<MemoEntry> {
     var value = m.memoEntries.get(key);
-    if (value == null) { // TODO: toOption()
+    if (value == null) {
       return None;
     } else {
       return Some(value);
@@ -95,6 +96,21 @@ class MemoObj {
 }
 
 class ReaderObj {
+
+  public static function textAround(r : Input, ?before : Int = 10, ?after : Int = 10) : { text : String, indicator : String } {
+    
+    var offset = Std.int(Math.max(0, r.offset - before));
+    
+    var text = r.content.substr(offset, before + after);
+    
+    var indicPadding = Std.int(Math.min(r.offset, before));
+    var indicator = StringTools.lpad("^", "_", indicPadding+1);
+    
+    return {    
+      text : text,
+      indicator : indicator
+    };
+  }
   
   inline public static function position(r : Input) : Int return
     r.offset
@@ -189,12 +205,11 @@ class Parsers {
     head: head
   }
   
-  public static function mkHead<T>(p: Parser<T>) : Head return
-    {
-      headParser: p.castType(),
-      involvedSet: List.nil(),
-      evalSet: List.nil()
-    }
+  public static function mkHead<T>(p: Parser<T>) : Head return {
+    headParser: p.castType(),
+    involvedSet: List.nil(),
+    evalSet: List.nil()
+  }
   
   public static function getPos(lr : LR) : Input return 
     switch(lr.seed) {
@@ -216,17 +231,13 @@ class Parsers {
       case None: throw "lrAnswer with no head!!";
       case Some(head): 
         if (head.getHead() != p) /*not head rule, so not growing*/{
-          //trace(" head.getHead() != p() ");
           return growable.seed.castType();
         } else {
-          //trace(" head.getHead() == p() ");
           input.updateCacheAndGet(genKey, MemoParsed(growable.seed));
           switch (growable.seed) {
             case Failure(_, _, _) :
-              //trace("failure");
               return growable.seed.castType();
             case Success(_, _) :
-              //trace("grow");
               return grow(p, genKey, input, head).castType(); /*growing*/ 
           }
         }
@@ -265,15 +276,6 @@ class Parsers {
       h.involvedSet = h.involvedSet.cons(head.rule);
       stack = stack.tail;
     }
-/*
-    stack.takeWhile(function (lr) return lr.rule != p).map(function (x) {
-      x.head = recDetect.head;
-      switch (recDetect.head) {
-        case Some(h):  h.involvedSet = h.involvedSet.cons(x.rule);
-        default:
-      }
-    });    
-    */
   }
   
   static function grow<T>(p: Parser<T>, genKey : Int -> String, rest: Input, head: Head): ParseResult<T> {
@@ -290,16 +292,11 @@ class Parsers {
     head.evalSet = head.involvedSet;
     var res = p(rest);
     switch (res) {
-      case Success(_, _) :
-        //trace("res " + oldRes.matchFromResult() + " " + res.matchFromResult());
-        //trace("pos " + oldRes.posFromResult().offset + " " + res.posFromResult().offset);
-        
+      case Success(_, _) :        
         if (oldRes.posFromResult().offset < res.posFromResult().offset ) {
-          //trace("inferior");
           rest.updateCacheAndGet(genKey, MemoParsed(res));
           return grow(p, genKey, rest, head);
         } else {
-          //trace("not inferior");
           //we're done with growing, we can remove data from recursion head
           rest.removeRecursionHead();
           switch (rest.getFromCache(genKey).get()) {
@@ -307,11 +304,18 @@ class Parsers {
             default: throw "impossible match";
           }
         }
-      default :
-        //trace("default");
-        rest.removeRecursionHead();
-      /*rest.updateCacheAndGet(p, MemoEntry(Right(f)));*/
-        return oldRes.castType();
+      case Failure(_, _, isError):
+        if (isError) { // the error must be propagated  and not discarded by the grower!
+          
+          rest.updateCacheAndGet(genKey, MemoParsed(res));
+          rest.removeRecursionHead();
+          return res.castType();
+          
+        } else {
+          rest.removeRecursionHead();
+          return oldRes.castType();
+        }
+        
     }
   }
   
@@ -320,41 +324,38 @@ class Parsers {
       // generates an uid for this parser.
       var uid = parserUid();
       function genKey(pos : Int) return uid+"@"+pos;
-      var _p1 = _p().lazy();
       function (input :Input) {
         
-        switch (recall(_p1(), genKey, input)) {
+        switch (recall(_p(), genKey, input)) {
           case None :
-            var base = Failure("Base Failure".errorAt(input).newStack(), input, false).mkLR(_p1(), None);
+            var base = Failure("Base Failure".errorAt(input).newStack(), input, false).mkLR(_p(), None);
             
             input.memo.lrStack  = input.memo.lrStack.cons(base);
             input.updateCacheAndGet(genKey, MemoLR(base));
-            //trace("add base failure");
             
-            var res = _p1()(input);
+            var res = _p()(input);
             
-            //trace("remove base failure");
             input.memo.lrStack = input.memo.lrStack.tail;
             
             switch (base.head) {
               case None:
-                //trace("base.head is None");
                 input.updateCacheAndGet(genKey, MemoParsed(res));
                 return res;
               case Some(_):
-                //trace("base.head is Some");
                 base.seed = res;
-                return lrAnswer(_p1(), genKey, input, base);
+                return lrAnswer(_p(), genKey, input, base);
             }
             
           case Some(mEntry):            
             switch(mEntry) {
               case  MemoLR(recDetect):
-                //trace("MemoLR");
-                setupLR(_p1(), input, recDetect);
+                setupLR(_p(), input, recDetect);
                 return recDetect.seed.castType();
               case  MemoParsed(ans):
-                //trace("Parsed " + ans);
+                switch (ans) {
+                  case Success(m, r): trace("success " + m);
+                  case Failure(m, r, isError): trace("failure: m " + m + " isError " + isError);
+                }
                 return ans.castType();
             }
         }
@@ -373,13 +374,11 @@ class Parsers {
 
   public static function andWith < T, U, V > (p1 : Void -> Parser<T>, p2 : Void -> Parser<U>, f : T -> U -> V) : Void -> Parser <V> return
     ({
-      var _p1 = p1().lazy();
-      var _p2 = p2().lazy();
       function (input) {
-        var res = _p1()(input);
+        var res = p1()(input);
         switch (res) {
           case Success(m1, r) :
-            var res = _p2()(r);
+            var res = p2()(r);
             switch (res) {
               case Success(m2, r) : return Success(f(m1, m2), r);
               case Failure(_, _, _): return res.castType();
@@ -401,9 +400,8 @@ class Parsers {
   // aka flatmap
   public static function andThen < T, U > (p1 : Void -> Parser<T>, fp2 : T -> (Void -> Parser<U>)) : Void -> Parser < U > return
     ( {
-      var _p1 = p1().lazy();
       function (input) {
-        var res = _p1()(input);
+        var res = p1()(input);
         switch (res) {
           case Success(m, r): return fp2(m)()(r);
           case Failure(_, _, _): return res.castType();
@@ -414,9 +412,8 @@ class Parsers {
   // map
   public static function then < T, U > (p1 : Void -> Parser<T>, f : T -> U) : Void -> Parser < U > return
     ({
-      var _p1 = p1().lazy();
       function (input) {
-        var res = _p1()(input);
+        var res = p1()(input);
         switch (res) {
           case Success(m, r): return Success(f(m), r);
           case Failure(_, _, _): return res.castType();
@@ -429,25 +426,24 @@ class Parsers {
   
   public static function commit < T > (p1 : Void -> Parser<T>) : Void -> Parser < T > return
     ( {
-      var _p1 = p1().lazy();
       function (input) {        
         var res = p1()(input);
         switch(res) {
           case Success(_, _): return res.castType();
-          case Failure(err, rest, isError) : return isError ? res : Failure(err, rest, true);
+          case Failure(err, rest, isError) :
+            trace("msg " + err.last.msg + " isError " + isError);
+            return (isError || (err.last.msg == "Base Failure"))  ? res : Failure(err, rest, true);
         }
       }
     }).lazy()
   
   public static function or < T > (p1 : Void -> Parser<T>, p2 : Void -> Parser<T>) : Void -> Parser < T > return
     ({
-      var _p1 = p1().lazy();
-      var _p2 = p2().lazy();
       function (input) {
-        var res = _p1()(input);
+        var res = p1()(input);
         switch (res) {
           case Success(_, _) : return res;
-          case Failure(_, _, isError) : return isError ? res.castType() : _p2()(input); // isError means that we commited to a parser that failed; this reports to the top..
+          case Failure(_, _, isError) : return isError ? res.castType() : p2()(input); // isError means that we commited to a parser that failed; this reports to the top..
         };
       }
     }).lazy()
@@ -460,9 +456,8 @@ class Parsers {
    */
   public static function many < T > (p1 : Void -> Parser<T>) : Void -> Parser < Array<T> > return
     ( {
-      var _p1 = p1().lazy();
       function (input) {
-        var parser = _p1();
+        var parser = p1();
         var arr = [];
         var matches = true;
         while (matches) {
@@ -518,7 +513,7 @@ class Parsers {
         if (pos.pos == 0) {
           Success(input.take(pos.len), input.drop(pos.len));
         } else {
-          Failure((r + "not matched at beginning").errorAt(input).newStack(), input, false);
+          Failure((Std.string(r) + "not matched at position " + input.offset ).errorAt(input).newStack(), input, false);
         }
       } else {
         Failure((r + " not matched").errorAt(input).newStack(), input, false);
@@ -527,9 +522,8 @@ class Parsers {
 
   public static function withError<T>(p : Void -> Parser<T>, f : String -> String ) : Void -> Parser<T> return  
     ( {
-      var _p1 = p().lazy();
       function (input : Input) {
-        var r = _p1()(input);
+        var r = p()(input);
         switch(r) {
           case Failure(err, input, isError): return Failure(err.report((f(err.head.msg)).errorAt(input)), input, isError);
           default: return r;
