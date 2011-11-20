@@ -155,17 +155,17 @@ class ReaderObj {
 }
 
 class FailureObj {
-  public static function newStack(failure : FailureMsg) : FailureStack {
+  inline public static function newStack(failure : FailureMsg) : FailureStack {
     var newStack = FailureStack.nil();
     return newStack.cons(failure);
   }
-  public static function errorAt(msg : String, pos : Input) : FailureMsg {
+  inline public static function errorAt(msg : String, pos : Input) : FailureMsg {
     return {
       msg : msg,
       pos : pos.offset      
     };
   }
-  public static function report(stack : FailureStack, msg : FailureMsg) : FailureStack {
+  inline public static function report(stack : FailureStack, msg : FailureMsg) : FailureStack {
     return stack.cons(msg);
   }
 }
@@ -364,8 +364,8 @@ class Parsers {
     }).lazy();
   }
   
-  public static function fail<T>(error : String) : Void -> Parser <T> return
-    (function (input :Input) return Failure(error.errorAt(input).newStack(), input, false)).lazy()
+  public static function fail<T>(error : String, isError : Bool) : Void -> Parser <T> return
+  (function (input :Input) return Failure(error.errorAt(input).newStack(), input, isError)).lazy()
 
   public static function success<T>(v : T) : Void -> Parser <T> return
     (function (input) return Success(v, input)).lazy()
@@ -422,7 +422,7 @@ class Parsers {
     }).lazy()
 
   public static function filter<T>(p : Void -> Parser<T>, pred : T -> Bool) : Void -> Parser <T> return
-    andThen(p, function (x) return pred(x) ? success(x) : fail("not matched"))
+    andThen(p, function (x) return pred(x) ? success(x) : fail("not matched", false))
   
   public static function commit < T > (p1 : Void -> Parser<T>) : Void -> Parser < T > return
     ( {
@@ -431,7 +431,6 @@ class Parsers {
         switch(res) {
           case Success(_, _): return res.castType();
           case Failure(err, rest, isError) :
-            trace("msg " + err.last.msg + " isError " + isError);
             return (isError || (err.last.msg == "Base Failure"))  ? res : Failure(err, rest, true);
         }
       }
@@ -449,7 +448,7 @@ class Parsers {
     }).lazy()
     
   public static function ors<T>(ps : Array<Void -> Parser<T>>) : Void -> Parser<T> return
-    ps.fold(function (p, accp) return or(accp, p), fail("none match"))
+    ps.fold(function (p, accp) return or(accp, p), fail("none match", false))
     
   /*
    * 0..n
@@ -461,9 +460,14 @@ class Parsers {
         var arr = [];
         var matches = true;
         while (matches) {
-          switch (parser(input)) {
+          var res = parser(input);
+          switch (res) {
             case Success(m, r): arr.push(m); input = r;
-            case Failure(_, _, _): matches = false;
+            case Failure(_, _, isError):
+              if (isError)
+                return res.castType();
+              else 
+                matches = false;
           }
         }
         return Success(arr, input);
@@ -530,7 +534,7 @@ class Parsers {
         }
       }
     }).lazy()
-
+    
   public static function tag<T>(p : Void -> Parser<T>, tag : String) : Void -> Parser<T> return  
     withError(p, function (_) return tag +" expected")
   

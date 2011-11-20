@@ -6,6 +6,8 @@ package ;
  */
 
 import com.mindrocks.text.Parser;
+import js.JQuery;
+import js.Lib;
 using com.mindrocks.text.Parser;
 
 import com.mindrocks.functional.Functional;
@@ -39,6 +41,7 @@ class JsonPrettyPrinter {
 }
 
 class BaseParser {
+  /*
   static var identifierR = ~/[a-zA-Z0-9_-]+/;
 
   static  var spaceP = " ".identifier();    
@@ -65,6 +68,7 @@ class BaseParser {
 
   static var identifierP =
     withSpacing(identifierR.regexParser());
+  */
 }
 
 class JsonParser extends BaseParser {
@@ -104,19 +108,19 @@ class JsonParser extends BaseParser {
     identifierP.then(JsData).lazyF();
     
   static var jsonArrayP =
-    leftBracketP._and(jsonValueP.repsep(commaP)).and_(rightBracketP).then(JsArray).lazyF();
+    leftBracketP._and(jsonValueP.repsep(commaP).commit()).and_(rightBracketP.commit()).then(JsArray).lazyF();
     
   static var jsonValueP : Void -> Parser<JsValue> =
-    [jsonParser, jsonDataP, jsonArrayP].ors().lazyF();
+    [jsonParser, jsonDataP, jsonArrayP].ors().tag("json value").lazyF();
 
   static var jsonEntryP =
-    identifierP.and_(sepP).and(jsonValueP).lazyF();
+    identifierP.and_(sepP.commit()).and(jsonValueP.commit()).lazyF();
   
   static  var jsonEntriesP =
-    jsonEntryP.repsep(commaP).lazyF();
+    jsonEntryP.repsep(commaP).commit().lazyF();
 
   public static var jsonParser =
-    leftAccP._and(jsonEntriesP).and_(rightAccP).then(function (entries)
+    leftAccP._and(jsonEntriesP).and_(rightAccP.commit()).then(function (entries)
       return JsObject(entries.map(makeField).array())
     ).lazyF();
 }
@@ -190,7 +194,7 @@ class LambdaTest {
 
 class ParserTest {
 
-  static function tryParse<T>(str : String, parser : Parser<T>, withResult : T -> Void) {
+  static function tryParse<T>(str : String, parser : Parser<T>, withResult : T -> Void, output : String -> Void) {
     try {
       switch (parser(str.reader())) {
         case Success(res, rest):
@@ -198,12 +202,10 @@ class ParserTest {
           withResult(res);
         case Failure(err, rest, _):
           var p = rest.textAround();
-          
-          trace(p.text);
-          trace(p.indicator);
-          
+          output(p.text);
+          output(p.indicator);          
           err.map(function (err) {
-            trace("Error at " + err.pos + " : " + err.msg);
+            output("Error at " + err.pos + " : " + err.msg);
           });
           
           
@@ -214,17 +216,30 @@ class ParserTest {
   }
   
   public static function jsonTest() {
+    
 
+    var elem = Lib.document.getElementById("haxe:trace");
+    if (elem != null) {
+      trace("elem[0] " + elem);
+      new JQuery(elem).css("font-family", "Courier New, monospace");      // monospace!
+    }
+    function toOutput(str : String) {
+      // REPLACE SPACES TO PREVENT THEM TO DDISAPPEAR..
+      trace(StringTools.replace(str, " ", "_"));
+    }
+    
     tryParse(
       " {  aaa : aa, bbb : [cc, dd] } ", // , bbb : ccc } ";
       JsonParser.jsonParser(),
-      function (res) trace("Parsed " + JsonPrettyPrinter.prettify(res))
+      function (res) trace("Parsed " + JsonPrettyPrinter.prettify(res)),
+      toOutput
     );
     
     tryParse(
       "5++3+2+3",
       LRTest.expr(),
-      function (res) trace("Parsed " + res)
+      function (res) trace("Parsed " + res),
+      toOutput
     );
     
   }
