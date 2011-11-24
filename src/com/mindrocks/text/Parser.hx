@@ -145,7 +145,7 @@ class ReaderObj {
     return e.match(rest(r));
   }
   
-  inline static function rest(r : Input) : String {
+  public inline static function rest(r : Input) : String {
     if (r.offset == 0) {
       return r.content;
     } else {
