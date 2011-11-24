@@ -224,7 +224,7 @@ class ParserTest {
     }
     function toOutput(str : String) {
       // REPLACE SPACES TO PREVENT THEM TO DDISAPPEAR..
-      Lib.
+      
       trace(StringTools.replace(str, " ", "_"));
     }
     

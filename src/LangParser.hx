@@ -84,6 +84,12 @@ class LambdaTest {
       retP.oneMany()
     ].ors().many().lazyF();
   
+  static  var spacingNoRetP =
+    [
+      spaceP.oneMany(),
+      tabP.oneMany()
+    ].ors().many().lazyF();
+    
   static  var stringStartP = withSpacing("\"".identifier());
   static  var stringStopP = "\"".identifier();
   static  var leftAccP = withSpacing("{".identifier());
@@ -100,8 +106,14 @@ class LambdaTest {
   static function withSpacing<T>(p : Void -> Parser<T>) return
     spacingP._and(p).lazyF()
 
+  static function withSpacingNoRet<T>(p : Void -> Parser<T>) return
+    spacingNoRetP._and(p).lazyF()
+
   static var identifierP =
     withSpacing(identifierR.regexParser()).tag("identifier").lazyF();
+
+  static var identifierNoRetP =
+    withSpacingNoRet(identifierR.regexParser()).tag("identifier").lazyF();
 
   static  var letP = withSpacing("let".identifier()).lazyF();
   static  var inP = withSpacing("in".identifier()).lazyF();
@@ -110,10 +122,10 @@ class LambdaTest {
     identifierP.then(function (id) return Ident(id)).tag("identifier").lazyF();
 
   static var numberP : Void -> Parser<PrimitiveType> =
-  numberR.regexParser().then(function (n) return Number(Std.parseInt(n)));
+    numberR.regexParser().then(function (n) return Number(Std.parseInt(n)));
   
   static var floatNumberP : Void -> Parser<PrimitiveType> =
-  numberP.and_(dotP).and(numberP).then(function (p) return FloatNumber(Std.parseFloat(p.a + "." + p.b)));
+    numberP.and_(dotP).and(numberP).then(function (p) return FloatNumber(Std.parseFloat(p.a + "." + p.b)));
   
 // TODO
 //  static var stringP =
@@ -128,8 +140,8 @@ class LambdaTest {
     identifierP.and_(arrowP).and(expressionP.commit()).then(function (p) return LambdaExpr(p.a, p.b)).tag("lambda").lazyF();
   
   static var applicationP : Void -> Parser<RExpression> =
-    rExpressionP.and(identifierP).then(function (p) return Apply(p.a, p.b)).tag("application").lazyF();
-    
+    rExpressionP.and(identifierNoRetP).then(function (p) return Apply(p.a, p.b)).tag("application").lazyF();
+  
   static var rExpressionP : Void -> Parser<RExpression> =
     [
       lambdaP,
@@ -142,7 +154,7 @@ class LambdaTest {
     identifierP.and_(equalsP).and(rExpressionP.commit()).then(function (p) return { ident: p.a, expr: p.b }).tag("let expression").lazyF();
   
   public static var expressionP : Void -> Parser<Expression> =
-    (letP._and(leftAccP)._and(letExpressionP.rep1sep(commaP)).and_(rightAccP).and_(inP)).option().and(rExpressionP).then(function (p) {
+    (letP._and((letExpressionP.rep1sep(commaP.or(retP))).and_(inP).commit())).option().and(rExpressionP).then(function (p) {
       var lets =
         switch (p.a) {
           case Some(ls): ls;
@@ -199,18 +211,14 @@ class LangParser {
       trace(StringTools.replace(str, " ", "_"));
     }
 
-    
     tryParse("
-      tata =
-      
       toto =
-        let {
-          a = 56,
-          add = a => b,
+        let
+          a = 56
+          v = a => b
           b = d
-        } in
+        in
           add c d
-
     ",
 //      "let x == y; {  aaa : aa, bbb :: [cc, dd] } ", // , bbb : ccc } ";
       LambdaTest.programP(),
@@ -222,3 +230,18 @@ class LangParser {
   
 }
 
+//  Sensitive layout requiers another kind of parsing phase, .. and must provide a way to reorganize code while keeping position information / coherence (without the lexer phase!)
+//  Regarder ce qui avait ete propose pour les quotations et le layout.. (peut etre qq chose d'interessant a cette intersection.. -> Tree at language level)  
+
+// Compile-time et runtime stagging blurred.. type level manipulation to remove by param number repetition.
+// Very lightweight code with runtime inlining (call site specification with depth limitation).
+// Type class approach (variables implicits and call site inlining).
+// Type states and phantom types.
+// Pattern matching and auto boxing of Anonymous unions.
+// Trampoline.
+// Scope manipulation in metaprogramming (!?! Relationnal Query Style? awesome.. cope with fresh names, etc.. annotation propagation)
+// No inheritence! Structural typing (and good error report).
+// Monad support aka Higher order Kinds.
+// Operator overloading and free variable naming (think JSON - mongodb needs).
+// Dependent typing (almost thanks to stagging).
+// Intuition; Neko makes it at the wrong level (should be web).
