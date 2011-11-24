@@ -45,73 +45,76 @@ typedef NamedValue<T> = {
 }
 
 
-enum JsDefValue<NextT> {
+enum JsDef {
   JsDefString;
   JsDefNumber;
   JsDefDynamic;
-  JsDefObj(fields : Array<NamedValue<NextT>>);
-  JsDefArray(def : NextT);
+  JsDefObj(fields : Array<NamedValue<JsDefs>>);
+  JsDefArray(def : JsDefs);
 }
 
-enum Choice<T> {
-  Nothing;
-  Or(xs : Array<Choice<T>>);
-  Elem(x : T);
-}
-typedef JsChoice = Choice<JsDefValue<JsChoice>>
+typedef JsDefs = Array<JsDef>
 
-enum JsValidValue<NextT> {
+enum JsValue {
   JsValString;
   JsValNumber;
   JsValDynamic;
-  JsValObj(fields : Array<NamedValue<NextT>>);
-  JsValArray(elems : Array<NextT>);
+  JsValObj(fields : Array<NamedValue<Validation>>);
+  JsValArray(elems : Array<Validation>);
 }
 
-enum ValidChoice<T> {
-  ValNothing;
-  ValOr(valids : Array<Validation<ValidChoice<T>>>);
-  ValElem(x : JsValidValue<Validation<ValidChoice<T>>>);
+enum ValidStatus {
+  Valid(valid : JsValue); // everything under is valid.
+  Partial(valid : JsValue); // not everything under is valid
+  Failed(); // invalid   
 }
-typedef JsValidChoice = ValidChoice<JsValidValue<JsValidChoice>>
 
-enum Validation<T> {
-  Valid(x: JsValidChoice); // everything under is valid.
-  Partial(x: JsValidChoice); // not everything under is valid
-  Failed(x: JsChoice, specimen : Array<Dynamic>); // invalid
+typedef ValidEntry = {
+  choice : JsDefs,
+  status : ValidStatus,
 }
-typedef JsValidation = Validation<JsValidChoice>
+
+typedef Validation = {
+  succeed : Array<ValidEntry>,
+  partial : Array<ValidEntry>,
+  failed : Array<ValidEntry>,
+  obj : Option<Dynamic>,
+}
 
 class Repr {
 
-  public static function isValid<T>(x : Validation<T>) : Bool return
-    switch (x) {
+  public static function isValid(x : Validation) : Bool return
+    x.succeed.length > 0
+
+  public static function validEntry(entry : ValidEntry) : Bool return
+    switch (entry.status) {
       case Valid(_): true;
-      case Partial(_): false;
-      case Failed(_, _): false;
+      default : false;
     }
 
-  public static function defFrom(obj : Dynamic) : JsChoice return {
+  public static function partialEntry(entry : ValidEntry) : Bool return
+    switch (entry.status) {
+      case Partial(_): true;
+      default : false;
+    }
+
+  public static function failedEntry(entry : ValidEntry) : Bool return
+    switch (entry.status) {
+      case Failed: true;
+      default : false;
+    }
+
+  public static function defFrom(obj : Dynamic) : JsDefs return {
     if (obj == null) { /*TODO: represent Null*/    
-      Nothing;
+      [];
     } else if (obj.is(String)) {
-      Elem(JsDefString);
+      [JsDefString];
     } else if (obj.is(Int) || obj.is(Float)) {
-      Elem(JsDefNumber);
+      [JsDefNumber];
     } else if (obj.is(Array) == true) {
       var elems : Array<Dynamic> = cast(obj, Array<Dynamic>);
       var elemDefs =  elems.map(defFrom);
-      var uniqueDefs = elemDefs.toSet().toArray(); // uniques
-      var elemDef : JsChoice = 
-        if (uniqueDefs.length == 0) {
-          Nothing;
-        } else if (uniqueDefs.length == 1) {
-          uniqueDefs[0];
-        } else {
-          Or(uniqueDefs);
-        }
-        
-      Elem(JsDefArray(elemDef));
+      elemDefs.toSet().toArray().flatten(); // uniques
     } else { // Object
       var namedValues =
         Reflect.fields(obj).foldl([], function (acc, fieldName) {
@@ -120,92 +123,99 @@ class Repr {
           acc.push(newValue);
           return acc;
         });
-      Elem(JsDefObj(namedValues));
+      [JsDefObj(namedValues)];
     }
   }
   
-  public static function areSame(a : JsChoice, b : JsChoice) : Bool {
+  public static function areSame(a : JsDefs, b : JsDefs) : Bool {
     throw "implement"; return null;
   }
   
-  public static function includes(a : JsChoice, b : JsChoice) : JsChoice {    
+  public static function includes(a : JsDefs, b : JsDefs) : JsDefs {    
     throw "implement"; return null;
   }
 
-  public static function merge(a : JsChoice, b : JsChoice) : JsChoice {
+  public static function merge(a : JsDefs, b : JsDefs) : JsDefs {
     throw "implement"; return null;
   }
     
   // returns the matchings and failures (a tree with all rules, if they matched or failed and the reasons).
-  public static function validatesObj(choice : JsChoice, obj : Dynamic) : JsValidation {
-    var res =
-      switch (choice) {
-        case Nothing:
-          if (obj==null)
-            Valid(ValNothing);
-          else
-            Failed(choice, [obj]);
-        case Or(xs) :
-          var results = xs.map(function (choice) return validatesObj(choice, obj));
-          var validResults = results.filter(isValid);
-          if (validResults.length > 0) {
-            Valid(ValOr(validResults));
-          }
-        case Elem(def):
-          var res =
-            switch (def) {
-              case JsDefString : 
-                obj.is(String) ? Valid(ValElem(JsValString)) : Failed(Elem(def), obj);
-                
-              case JsDefNumber : 
-                (obj.is(Int) || obj.is(Float)) ? Valid(ValElem(JsValNumber)) : Failed(Elem(def), obj);
-                
-              case JsDefDynamic : 
-                Valid(ValElem(JsValDynamic));
-              
-              case JsDefObj(fields) :
-                var nameAndValues =
-                  Reflect.fields(obj).foldl(Map.create(), function (acc, fieldName) return acc.add(fieldName.entuple(Reflect.field(obj, fieldName))));
-                
-                var missingField = false;
-                
-                var results = 
-                  fields.map(function (field) return {
-                    name  : field.name,
-                    value :
-                      switch(nameAndValues.get(field.name)) {
-                        case None: missingField = true; Failed(field.value, []);
-                        case Some(subObj): validatesObj(field.value, subObj);
-                      }
-                  });
-                  
-                if (missingField) {
-                  Failed(Elem(def), [obj]);
-                } else {
-                  if (results.forAll(function (field) return isValid(field.value))) {
-                    Valid(ValElem(JsValObj(results)));
-                  } else {
-                    Partial(ValElem(JsValObj(results)));
+  public static function validatesObj(choices : JsDefs, obj : Dynamic) : Validation {
+    
+    function validateWithDef(def : JsDef) : ValidEntry {
+      var status : ValidStatus =
+        switch (def) {
+          case JsDefString : 
+            obj.is(String) ? Valid(JsValString) : Failed;
+            
+          case JsDefNumber : 
+            (obj.is(Int) || obj.is(Float)) ? Valid(JsValNumber) : Failed;
+            
+          case JsDefDynamic : 
+            Valid(JsValDynamic);
+          
+          case JsDefObj(fields) :
+            var nameAndValues =
+              Reflect.fields(obj).foldl(Map.create(), function (acc, fieldName) return acc.add(fieldName.entuple(Reflect.field(obj, fieldName))));
+            
+            var missingField = false;
+            
+            var results = 
+              fields.map(function (field) return {
+                name  : field.name,
+                value :
+                  switch(nameAndValues.get(field.name)) {
+                    case Some(subObj): validatesObj(field.value, subObj);
+                    case None:
+                      missingField = true;
+                      var res : Validation = {
+                        succeed:[],
+                        partial:[],
+                        failed:[ { choice : field.value, status : Failed } ],
+                        obj : None
+                      };
+                      res;
                   }
-                }
-                
-              case JsDefArray(elemDef) :
-                if (obj.is(Array) == true) {
-                  var elems : Array<Dynamic> = cast(obj, Array<Dynamic>);
-                  var results = elems.map(function (value) return validatesObj(elemDef, value));
+              });
+            
+            if (missingField) {
+              Failed;
+            } else {
+              if (results.forAll(function (field) return isValid(field.value))) {
+                Valid(JsValObj(results));
+              } else {
+                Partial(JsValObj(results));
+              }
+            }
+            
+          case JsDefArray(elemDef) :
+            if (obj.is(Array) == true) {
+              var elems : Array<Dynamic> = cast(obj, Array<Dynamic>);
+              var results = elems.map(function (value) return validatesObj(elemDef, value));
 
-                  if (results.forAll(isValid)) {
-                    Valid(ValElem(JsValArray(results)));
-                  } else {
-                    Partial(ValElem(JsValArray(results)));
-                  }
-                } else {
-                  Failed(Elem(def), [obj]);
-                }
-            };
-          res;
-      };
-    return res;
+              if (results.forAll(isValid)) {
+                Valid(JsValArray(results));
+              } else {
+                Partial(JsValArray(results));
+              }
+            } else {
+              Failed;
+            }
+        };
+        return {
+          choice : [def],
+          status : status,
+        };
+    }
+
+    var results : Array<ValidEntry> = choices.map(validateWithDef);
+
+    return {
+      succeed : results.filter(validEntry),
+      partial : results.filter(partialEntry),
+      failed : results.filter(failedEntry),
+      obj : obj,
+    };
   }
 
   
