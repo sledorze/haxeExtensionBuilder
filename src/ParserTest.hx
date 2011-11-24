@@ -217,7 +217,6 @@ class ParserTest {
   
   public static function jsonTest() {
     
-
     var elem = Lib.document.getElementById("haxe:trace");
     if (elem != null) {
       trace("elem[0] " + elem);
@@ -225,11 +224,12 @@ class ParserTest {
     }
     function toOutput(str : String) {
       // REPLACE SPACES TO PREVENT THEM TO DDISAPPEAR..
+      Lib.
       trace(StringTools.replace(str, " ", "_"));
     }
     
     tryParse(
-      " {  aaa : aa, bbb : [cc, dd] } ", // , bbb : ccc } ";
+      " {  aaa : aa, bbb :: [cc, dd] } ", // , bbb : ccc } ";
       JsonParser.jsonParser(),
       function (res) trace("Parsed " + JsonPrettyPrinter.prettify(res)),
       toOutput
