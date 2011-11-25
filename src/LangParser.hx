@@ -6,6 +6,7 @@ package ;
  */
 
 import com.mindrocks.text.Parser;
+import haxe.Timer;
 import js.JQuery;
 import js.Lib;
 using com.mindrocks.text.Parser;
@@ -81,13 +82,13 @@ class LambdaTest {
     [
       spaceP.oneMany(),
       tabP.oneMany(),
-      retP.oneMany()
     ].ors().many().lazyF();
   
-  static  var spacingNoRetP =
+  static  var spacingOrRetP =
     [
       spaceP.oneMany(),
-      tabP.oneMany()
+      tabP.oneMany(),
+      retP.oneMany()
     ].ors().many().lazyF();
     
   static  var stringStartP = withSpacing("\"".identifier());
@@ -102,18 +103,14 @@ class LambdaTest {
   static  var arrowP = withSpacing("=>".identifier());
   static  var dotP = ".".identifier();
   
-  
+  static function maybeRet<T>(p : Void -> Parser<T>) return 
+    spacingOrRetP.option()._and(p)
+    
   static function withSpacing<T>(p : Void -> Parser<T>) return
     spacingP._and(p).lazyF()
 
-  static function withSpacingNoRet<T>(p : Void -> Parser<T>) return
-    spacingNoRetP._and(p).lazyF()
-
   static var identifierP =
     withSpacing(identifierR.regexParser()).tag("identifier").lazyF();
-
-  static var identifierNoRetP =
-    withSpacingNoRet(identifierR.regexParser()).tag("identifier").lazyF();
 
   static  var letP = withSpacing("let".identifier()).lazyF();
   static  var inP = withSpacing("in".identifier()).lazyF();
@@ -124,7 +121,7 @@ class LambdaTest {
   static var numberP : Void -> Parser<PrimitiveType> =
     numberR.regexParser().then(function (n) return Number(Std.parseInt(n)));
   
-  static var floatNumberP : Void -> Parser<PrimitiveType> =
+  static var floatNumberP : Void -> Parser<PrimitiveType> = // TODO: change this!
     numberP.and_(dotP).and(numberP).then(function (p) return FloatNumber(Std.parseFloat(p.a + "." + p.b)));
   
 // TODO
@@ -137,10 +134,10 @@ class LambdaTest {
     ].ors().then(Primitive).tag("primitive").lazyF();
     
   static var lambdaP : Void -> Parser<RExpression> =
-    identifierP.and_(arrowP).and(expressionP.commit()).then(function (p) return LambdaExpr(p.a, p.b)).tag("lambda").lazyF();
+    identifierP.and_(arrowP).and(maybeRet(expressionP.commit())).then(function (p) return LambdaExpr(p.a, p.b)).tag("lambda").lazyF();
   
   static var applicationP : Void -> Parser<RExpression> =
-    rExpressionP.and(identifierNoRetP).then(function (p) return Apply(p.a, p.b)).tag("application").lazyF();
+    rExpressionP.and(identifierP).then(function (p) return Apply(p.a, p.b)).tag("application").lazyF();
   
   static var rExpressionP : Void -> Parser<RExpression> =
     [
@@ -151,10 +148,10 @@ class LambdaTest {
     ].ors().memo().tag("RExpression").lazyF();
     
   static var letExpressionP : Void -> Parser<LetExpression> =
-    identifierP.and_(equalsP).and(rExpressionP.commit()).then(function (p) return { ident: p.a, expr: p.b }).tag("let expression").lazyF();
+    identifierP.and_(equalsP).and(maybeRet(rExpressionP.commit())).then(function (p) return { ident: p.a, expr: p.b }).tag("let expression").lazyF();
   
   public static var expressionP : Void -> Parser<Expression> =
-    (letP._and((letExpressionP.rep1sep(commaP.or(retP))).and_(inP).commit())).option().and(rExpressionP).then(function (p) {
+    (letP._and(maybeRet(maybeRet(letExpressionP).rep1sep(commaP.or(retP)).and_(commaP.option())).and_(maybeRet(inP)).commit())).option().and(maybeRet(rExpressionP)).then(function (p) {
       var lets =
         switch (p.a) {
           case Some(ls): ls;
@@ -165,7 +162,7 @@ class LambdaTest {
     
     
   static var definitionP =
-    identifierP.and_(equalsP).and(expressionP.commit()).then(function (p) return { name : p.a, expr : p.b } ).tag("definition").lazyF();
+    maybeRet(identifierP).and_(equalsP).and(maybeRet(expressionP.commit())).then(function (p) return { name : p.a, expr : p.b } ).tag("definition").lazyF();
     
   public static var programP =
     definitionP.many().tag("program").commit().lazyF();
@@ -176,7 +173,10 @@ class LangParser {
 
   static function tryParse<T>(str : String, parser : Parser<T>, withResult : T -> Void, output : String -> Void) {
     try {
-      switch (parser(str.reader())) {
+      var res = 
+        Timer.measure(function () return parser(str.reader()));
+      
+      switch (res) {
         case Success(res, rest):
           var remaining = rest.rest();
           if (StringTools.trim(remaining).length == 0) {
@@ -215,10 +215,13 @@ class LangParser {
       toto =
         let
           a = 56
-          v = a => b
+          b = d
+          v = a =>
+            let x = 12
+            in x
           b = d
         in
-          add c d
+          add c d          
     ",
 //      "let x == y; {  aaa : aa, bbb :: [cc, dd] } ", // , bbb : ccc } ";
       LambdaTest.programP(),

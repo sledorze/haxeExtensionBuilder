@@ -17,7 +17,7 @@ class LazyMacro {
   public static var computing = new Array<Dynamic>();
   
   @:macro public static function lazy(exp : Expr) : Expr return {
-    "function(){
+    "{
       var value = null;
       return function () {        
         if (value == null) {
@@ -26,7 +26,7 @@ class LazyMacro {
         }
         return value;
       };
-    }()
+    }
     ".stagged();
   }
 
