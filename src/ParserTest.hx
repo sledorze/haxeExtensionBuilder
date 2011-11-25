@@ -42,7 +42,7 @@ class JsonPrettyPrinter {
   }
 }
 
-class JsonParser extends BaseParser {
+class JsonParser {
   
   static function makeField(t : Tuple2<String, JsValue>) return
     { name : t.a, value : t.b }
@@ -79,13 +79,13 @@ class JsonParser extends BaseParser {
     identifierP.then(JsData).lazyF();
     
   static var jsonArrayP =
-    leftBracketP._and(jsonValueP.repsep(commaP).commit()).and_(rightBracketP.commit()).then(JsArray).lazyF();
+    leftBracketP._and(jsonValueP.repsep(commaP).and_(rightBracketP).commit()).then(JsArray).lazyF();
     
   static var jsonValueP : Void -> Parser<JsValue> =
     [jsonParser, jsonDataP, jsonArrayP].ors().tag("json value").lazyF();
 
   static var jsonEntryP =
-    identifierP.and_(sepP.commit()).and(jsonValueP.commit()).lazyF();
+    identifierP.and(sepP._and(jsonValueP).commit()).lazyF();
   
   static  var jsonEntriesP =
     jsonEntryP.repsep(commaP).commit().lazyF();
