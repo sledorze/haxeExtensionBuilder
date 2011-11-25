@@ -137,61 +137,6 @@ class LRTest {
   public static var expr : Void -> Parser<String> = binop.or(posNumberP).memo().tag("expression").lazyF();
 }
 
-/*
-			Letrec("factorial", // letrec factorial =
-				Lambda("n",    // fn n =>
-					Apply(
-						Apply(   // cond (zero n) 1
-							Apply(Ident("cond"),     // cond (zero n)
-								Apply(Ident("zero"), Ident("n"))),
-							Ident("1")),
-						Apply(    // times n
-							Apply(Ident("times"), Ident("n")),
-							Apply(Ident("factorial"),
-								Apply(Ident("pred"), Ident("n")))
-						)
-					)
-				),      // in
-				Apply(Ident("factorial"), Ident("5"))
-			),
-*/
-class LambdaTest {
-  
-  static var identifierR = ~/[a-zA-Z0-9_-]+/;
-
-  static  var spaceP = " ".identifier();    
-  static  var tabP = "\t".identifier();
-  static  var retP = ("\r".identifier().or("\n".identifier()));
-  
-  static  var spacingP =
-    [
-      spaceP.oneMany(),
-      tabP.oneMany(),
-      retP.oneMany()
-    ].ors().many().lazyF();
-  
-  static  var leftAccP = withSpacing("{".identifier());
-  static  var rightAccP = withSpacing("}".identifier());
-  static  var leftBracketP = withSpacing("[".identifier());
-  static  var rightBracketP = withSpacing("]".identifier());
-  static  var sepP = withSpacing(":".identifier());
-  static  var commaP = withSpacing(",".identifier());
-  static  var equalsP = withSpacing(",".identifier());
-  
-  
-  static function withSpacing<T>(p : Void -> Parser<T>) return
-    spacingP._and(p)
-
-  static var identifierP =
-    withSpacing(identifierR.regexParser());
-
-  static  var letP = withSpacing("let".identifier());
-
-  static var definitionP = letP._and(identifierP).and_(equalsP).and(identifierP).then(function (t) return "name : "+ t.a  + " body " + t.b).lazyF();
-  
-  static var programP = definitionP.many().lazyF();
-}
-
 class ParserTest {
 
   static function tryParse<T>(str : String, parser : Parser<T>, withResult : T -> Void, output : String -> Void) {

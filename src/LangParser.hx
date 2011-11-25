@@ -18,9 +18,7 @@ using com.mindrocks.macros.LazyMacro;
 
 using Lambda; 
 
-
 // Parse a definition base on text based specification of expressions.
-
 /*
 			Letrec("factorial", // letrec factorial =
 				Lambda("n",    // fn n =>
@@ -223,7 +221,6 @@ class LangParser {
         in
           add c d          
     ",
-//      "let x == y; {  aaa : aa, bbb :: [cc, dd] } ", // , bbb : ccc } ";
       LambdaTest.programP(),
       function (res) trace("Parsed " + Std.string(res)),
       toOutput

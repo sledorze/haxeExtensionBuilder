@@ -9,9 +9,9 @@ class Main {
 	
 	static function main() {
 
-    LangParser.langTest();
+//    LangParser.langTest();
     
-    // ParserTest.jsonTest();
+    ParserTest.jsonTest();
     // StructureTest.test();
     // MergeTest.compilationTest();
     // JsonTest.compilationTest();    

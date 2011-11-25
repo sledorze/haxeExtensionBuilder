@@ -321,6 +321,9 @@ class Parsers {
 
   inline public static var baseFailure = "Base Failure";
 
+  /**
+   * Lift a parser to a packrat parser (memo is derived from scala's library)
+   */
   public static function memo<T>(_p : Void -> Parser<T>) : Void -> Parser<T> {
     ({
       // generates an uid for this parser.
@@ -354,12 +357,6 @@ class Parsers {
                 setupLR(_p(), input, recDetect);
                 return recDetect.seed.castType();
               case  MemoParsed(ans):
-                /*
-                switch (ans) {
-                  case Success(m, r): trace("success " + m);
-                  case Failure(m, r, isError): trace("failure: m " + m + " isError " + isError);
-                }
-                */
                 return ans.castType();
             }
         }
@@ -439,6 +436,9 @@ class Parsers {
   inline public static function filter<T>(p : Void -> Parser<T>, pred : T -> Bool) : Void -> Parser <T> return
     andThen(p, forPredicate(pred))
   
+  /**
+   * Generates an error if the parser returns a failure (an error make the choice combinator fail with an error without evaluating alternatives).
+   */
   public static function commit < T > (p1 : Void -> Parser<T>) : Void -> Parser < T >
     ( {
       function (input) {        
