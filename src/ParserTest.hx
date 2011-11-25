@@ -23,7 +23,9 @@ enum JsValue {
   JsArray(elements : Array<JsValue>);
   JsData(x : String);
 }
-
+/**
+ * Quick n dirty.
+ */
 class JsonPrettyPrinter {
   public static function prettify(json : JsValue) : String return {
     function internal(json : JsValue) : String return {
@@ -38,37 +40,6 @@ class JsonPrettyPrinter {
     }
     internal(json);
   }
-}
-
-class BaseParser {
-  /*
-  static var identifierR = ~/[a-zA-Z0-9_-]+/;
-
-  static  var spaceP = " ".identifier();    
-  static  var tabP = "\t".identifier();
-  static  var retP = ("\r".identifier().or("\n".identifier()));
-  
-  static  var spacingP =
-    [
-      spaceP.oneMany(),
-      tabP.oneMany(),
-      retP.oneMany()
-    ].ors().many().lazyF();
-  
-  static  var leftAccP = withSpacing("{".identifier());
-  static  var rightAccP = withSpacing("}".identifier());
-  static  var leftBracketP = withSpacing("[".identifier());
-  static  var rightBracketP = withSpacing("]".identifier());
-  static  var sepP = withSpacing(":".identifier());
-  static  var commaP = withSpacing(",".identifier());
-  
-  
-  static function withSpacing<T>(p : Void -> Parser<T>) return
-    spacingP._and(p)
-
-  static var identifierP =
-    withSpacing(identifierR.regexParser());
-  */
 }
 
 class JsonParser extends BaseParser {
