@@ -235,15 +235,21 @@ class Stagged {
   @:macro public static function stagged(code : String, ?id : Int = 0) : Expr {
     initialCode = code;
 
-    var r : EReg = ~/\$[a-zA-Z0-9_-]+/;
-    var identifiers = [];
-    var newCode =  /*TODO: no more need new code .. can remove that! */
-      r.customReplace(code, function (reg) {
-        var ident = reg.matched(0).substr(1);
-        if (!identifiers.has(ident))
-          identifiers.push(ident);
-        return ident;
-      });
+    var identifiers = {
+      var r : EReg = ~/\$[a-zA-Z0-9_-]+/;
+      
+      var res = [];
+      var s = code;
+      while( true ) {
+        if( !r.match(s) )
+          break;
+        var ident = r.matched(0).substr(1); // matchedLeft().substr(1);
+        if (!res.has(ident))
+          res.push(ident);
+        s = r.matchedRight();      
+      }
+      res;
+    }
     
     var mappings =  "{ " + identifiers.map(function (str) return str + " : " + str).join(", ") + " }";
     
