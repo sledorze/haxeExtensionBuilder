@@ -76,24 +76,25 @@ class JsonParser {
     withSpacing(identifierR.regexParser());
 
   static var jsonDataP =
-    identifierP.then(JsData).lazyF();
-    
-  static var jsonArrayP =
-    leftBracketP._and(jsonValueP.repsep(commaP).and_(rightBracketP).commit()).then(JsArray).lazyF();
+    identifierP.then(JsData);
     
   static var jsonValueP : Void -> Parser<JsValue> =
     [jsonParser, jsonDataP, jsonArrayP].ors().tag("json value").lazyF();
 
+  static var jsonArrayP =
+    leftBracketP._and(jsonValueP.repsep(commaP).and_(rightBracketP).commit()).then(JsArray);
+    
+
   static var jsonEntryP =
-    identifierP.and(sepP._and(jsonValueP).commit()).lazyF();
+    identifierP.and(sepP._and(jsonValueP).commit());
   
   static  var jsonEntriesP =
-    jsonEntryP.repsep(commaP).commit().lazyF();
+    jsonEntryP.repsep(commaP).commit();
 
   public static var jsonParser =
     leftAccP._and(jsonEntriesP).and_(rightAccP.commit()).then(function (entries)
       return JsObject(entries.map(makeField).array())
-    ).lazyF();
+    );
 }
 
 class LRTest {
