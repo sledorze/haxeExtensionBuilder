@@ -14,7 +14,6 @@ using com.mindrocks.macros.Stagged;
 
 class LazyMacro {
 
-  // detect if applying lazy would change anything (this obviously is not working, would requiers inspecting the actual AST).
   static function alreadyLazy(type : Type) : Bool {
     switch (type) {
       case TFun(args, _): return args.length == 0;
@@ -22,15 +21,13 @@ class LazyMacro {
       default : return false;
     };
   }
-  
+
   @:macro public static function lazy(exp : Expr) : Expr {
-  /*  
-    if ( alreadyLazy(Context.typeof(exp))) {
-      trace("EXP " + exp);
+    var type = Context.typeof(exp);    
+    if ( alreadyLazy(type)) {
       return exp;
     } else {
-*/    
-    return
+      var res : Expr =
       "{
         var value = null;
         return function () {        
@@ -42,21 +39,8 @@ class LazyMacro {
         };
       }
       ".stagged();
-//    }
-  }
-
-  @:macro public static function lazyF(exp : Expr) : Expr return {
-    "{
-      var value = null;
-      function () {
-        if (value == null) {
-          value = untyped 1; // not null to prevent live lock if it forms a cycle.
-          value = $exp();
-        }
-        return value;
-      };
+      return res;  
     }
-    ".stagged();
   }
 
 }
