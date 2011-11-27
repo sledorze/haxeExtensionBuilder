@@ -238,7 +238,7 @@ class Parsers {
             case Failure(_, _, _) :
               return growable.seed.castType();
             case Success(_, _) :
-              return grow(p, genKey, input, head).castType(); /*growing*/ 
+              return grow(p, genKey, input, head); /*growing*/ 
           }
         }
     }
@@ -309,7 +309,7 @@ class Parsers {
           
           rest.updateCacheAndGet(genKey, MemoParsed(res));
           rest.removeRecursionHead();
-          return res.castType();
+          return res;
           
         } else {
           rest.removeRecursionHead();
@@ -324,7 +324,7 @@ class Parsers {
   /**
    * Lift a parser to a packrat parser (memo is derived from scala's library)
    */
-  public static function memo<T>(_p : Void -> Parser<T>) : Void -> Parser<T> {
+  public static function memo<T>(_p : Void -> Parser<T>) : Void -> Parser<T>
     ({
       // generates an uid for this parser.
       var uid = parserUid();
@@ -362,8 +362,7 @@ class Parsers {
         }
         
       };
-    }).lazy();
-  }
+    }).lazy()
   
   public static function fail<T>(error : String, isError : Bool) : Void -> Parser <T>
     (function (input :Input) return Failure(error.errorAt(input).newStack(), input, isError)).lazy()
@@ -444,7 +443,7 @@ class Parsers {
       function (input) {        
         var res = p1()(input);
         switch(res) {
-          case Success(_, _): return res.castType();
+          case Success(_, _): return res;
           case Failure(err, rest, isError) :
             return (isError || (err.last.msg == baseFailure))  ? res : Failure(err, rest, true);
         }
@@ -457,7 +456,7 @@ class Parsers {
         var res = p1()(input);
         switch (res) {
           case Success(_, _) : return res;
-          case Failure(_, _, isError) : return isError ? res.castType() : p2()(input); // isError means that we commited to a parser that failed; this reports to the top..
+          case Failure(_, _, isError) : return isError ? res : p2()(input); // isError means that we commited to a parser that failed; this reports to the top..
         };
       }
     }).lazy()
@@ -477,7 +476,7 @@ class Parsers {
           switch (res) {
             case Success(_, _) : return res;
             case Failure(_, _, isError) :
-              if (isError || (++pIndex == ps.length)) return res.castType(); // isError means that we commited to a parser that failed; this reports to the top..
+              if (isError || (++pIndex == ps.length)) return res; // isError means that we commited to a parser that failed; this reports to the top..
           };
         }
         return Failure("none match".errorAt(input).newStack(), input, false);
