@@ -84,7 +84,6 @@ class JsonParser {
   static var jsonArrayP =
     leftBracketP._and(jsonValueP.repsep(commaP).and_(rightBracketP).commit()).then(JsArray);
     
-
   static var jsonEntryP =
     identifierP.and(sepP._and(jsonValueP).commit());
   
@@ -103,10 +102,10 @@ class LRTest {
   
   static var plusP = "+".identifier();
   
-  static var posNumberP = posNumberR.regexParser().tag("number").lazyF();
+  static var posNumberP = posNumberR.regexParser().tag("number");
     
   static var binop = (expr.and_(plusP)).andWith(expr.commit(), function (a, b) return a + " + " + b).tag("binop").lazyF();
-  public static var expr : Void -> Parser<String> = binop.or(posNumberP).memo().tag("expression").lazyF();
+  public static var expr : Void -> Parser<String> = binop.or(posNumberP).memo().tag("expression");
 }
 
 class ParserTest {
