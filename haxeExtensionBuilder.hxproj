@@ -16,7 +16,7 @@
   <!-- Other classes to be compiled into your SWF -->
   <classpaths>
     <class path="src" />
-    <class path="..\Haxe\Stax\src\main\haxe" />
+    <class path="dep\stax\src\main\haxe" />
   </classpaths>
   <!-- Build options -->
   <build>
