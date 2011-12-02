@@ -1,4 +1,4 @@
-package com.mindrocks.text;
+package com.mindrocks.text;   
 
 import com.mindrocks.functional.Functional;
 using com.mindrocks.functional.Functional;
@@ -6,7 +6,7 @@ using com.mindrocks.functional.Functional;
 
 using Lambda;
 import haxe.data.collections.List; // reimplement minimal version.
-
+import com.mindrocks.text.InputStream;
 
 using com.mindrocks.macros.LazyMacro;
 
@@ -15,8 +15,8 @@ using com.mindrocks.macros.LazyMacro;
  * @author sledorze
  */
 
-typedef Input = {
-  content : String,
+typedef Input<I> = {
+  content : Enumerable<Dynamic,I>,
   offset : Int,
   memo : Memo
 }
@@ -28,29 +28,29 @@ typedef Memo = {
 }
 
 enum MemoEntry {
-  MemoParsed(ans : ParseResult<Dynamic>);
+  MemoParsed(ans : ParseResult<Dynamic,Dynamic>);
   MemoLR(lr : LR);
 }
 
 typedef MemoKey = String
 
 class ParserObj {
-  inline public static function castType<T, U>(p : Parser<T>) : Parser<U> return 
+  inline public static function castType<I,T, U>(p : Parser<I,T>) : Parser<I,U> return 
     untyped p
 }
 
 class ResultObj {
   
-  inline public static function castType<T, U>(p : ParseResult<T>) : ParseResult<U> return 
+  inline public static function castType<I, T, U>(p : ParseResult<I,T>) : ParseResult<I, U> return 
     untyped p
   
-  public static function posFromResult<T>(p : ParseResult<T>) : Input
+  public static function posFromResult<I,T>(p : ParseResult<I,T>) : Input<I>
     switch (p) {
       case Success(_, rest) : return rest;
       case Failure(_, rest, _) : return rest;
     }
     
-  public static function matchFromResult<T>(p : ParseResult<T>) 
+  public static function matchFromResult<I,T>(p : ParseResult<I,T>) 
     switch (p) {
       case Success(x, _) : return Std.string(x);
       case Failure(_, _, _) : return "";
@@ -61,27 +61,27 @@ using com.mindrocks.text.Parser;
 
 class MemoObj {
   
-  inline public static function updateCacheAndGet(r : Input, genKey : Int -> String, entry : MemoEntry) {
+  inline public static function updateCacheAndGet<I>(r : Input<I>, genKey : Int -> String, entry : MemoEntry) {
     var key = genKey(r.offset);
     r.memo.memoEntries.set(key, entry);    
     return entry;
   }
-  public inline static function getFromCache(r : Input, genKey : Int -> String) : Option<MemoEntry> {
+  public inline static function getFromCache<I>(r : Input<I>, genKey : Int -> String) : Option<MemoEntry> {
     var key = genKey(r.offset);
     var res = r.memo.memoEntries.get(key);
     return res == null?None: Some(res);
   }
 
-  public inline static function getRecursionHead(r : Input) : Option<Head> {
+  public inline static function getRecursionHead<I>(r : Input<I>) : Option<Head> {
     var res = r.memo.recursionHeads.get(r.offset + "");
     return res == null?None: Some(res);
   }
   
-  public inline static function setRecursionHead(r : Input, head : Head) {
+  public inline static function setRecursionHead<I>(r : Input<I>, head : Head) {
     r.memo.recursionHeads.set(r.offset + "", head);
   }
 
-  public inline static function removeRecursionHead(r : Input) {
+  public inline static function removeRecursionHead<I>(r : Input<I>) {
     r.memo.recursionHeads.remove(r.offset + "");
   }
   
@@ -97,11 +97,11 @@ class MemoObj {
 
 class ReaderObj {
 
-  public static function textAround(r : Input, ?before : Int = 10, ?after : Int = 10) : { text : String, indicator : String } {
+  public static function textAround(r : Input<String>, ?before : Int = 10, ?after : Int = 10) : { text : String, indicator : String } {
     
     var offset = Std.int(Math.max(0, r.offset - before));
     
-    var text = r.content.substr(offset, before + after);
+    var text = r.content.grab(offset, before + after);
     
     var indicPadding = Std.int(Math.min(r.offset, before));
     var indicator = StringTools.lpad("^", "_", indicPadding+1);
@@ -112,11 +112,11 @@ class ReaderObj {
     };
   }
   
-  inline public static function position(r : Input) : Int return
+  inline public static function position<I>(r : Input<I>) : Int return
     r.offset
   
-  inline public static function reader(str : String) : Input return {
-    content : str,
+  inline public static function reader(str : String) : Input<String> return {
+    content : cast Tools.enumerable(str),
     offset : 0,
     memo : {
       memoEntries : new Hash<MemoEntry>(),
@@ -125,11 +125,11 @@ class ReaderObj {
     }
   }
   
-  inline public static function take(r : Input, len : Int) : String {
-    return r.content.substr(r.offset, len);
+  inline public static function take(r : Input<String>, len : Int) : String {
+    return r.content.grab(r.offset, len);
   }
   
-  inline public static function drop(r : Input, len : Int) : Input {
+  inline public static function drop<I>(r : Input<I>, len : Int) : Input<I> {
     return {
       content : r.content,
       offset : r.offset + len,
@@ -137,19 +137,19 @@ class ReaderObj {
     };
   }
   
-  inline public static function startsWith(r : Input, x : String) : Bool {
+  inline public static function startsWith(r : Input<String>, x : String) : Bool {
     return take(r, x.length) == x;
   }
   
-  inline public static function matchedBy(r : Input, e : EReg) : Bool { // this is deadly unfortunate that RegEx don't support offset and first char maching constraint..
+  inline public static function matchedBy(r : Input<String>, e : EReg) : Bool { // this is deadly unfortunate that RegEx don't support offset and first char maching constraint..
     return e.match(rest(r));
   }
   
-  public inline static function rest(r : Input) : String {
+  public inline static function rest(r : Input<String>) : String {
     if (r.offset == 0) {
-      return r.content;
+      return r.content.grab();
     } else {
-      return r.content.substr(r.offset);
+      return r.content.grab(r.offset,r.content.length - r.offset);
     }
   }
 }
@@ -159,7 +159,7 @@ class FailureObj {
     var newStack = FailureStack.nil();
     return newStack.cons(failure);
   }
-  inline public static function errorAt(msg : String, pos : Input) : FailureMsg {
+  inline public static function errorAt<I>(msg : String, pos : Input<I>) : FailureMsg {
     return {
       msg : msg,
       pos : pos.offset      
@@ -178,46 +178,46 @@ typedef FailureMsg = {
   pos : Int
 }
 
-enum ParseResult<T> {
-  Success(match : T, rest : Input);
-  Failure(errorStack : FailureStack, rest : Input, isError : Bool);
+enum ParseResult<I,O> {
+  Success(match : O, rest : Input<I>);
+  Failure(errorStack : FailureStack, rest : Input<I>, isError : Bool);
 }
 
-typedef Parser<T> = Input -> ParseResult<T>
+typedef Parser<I,T> = Input<I> -> ParseResult<I,T>
 
 typedef LR = {
-  seed: ParseResult<Dynamic>,
-  rule: Parser<Dynamic>,
+  seed: ParseResult<Dynamic,Dynamic>,
+  rule: Parser<Dynamic,Dynamic>,
   head: Option<Head>
 }
 
 typedef Head = {
-  headParser: Parser<Dynamic>,
-  involvedSet: List<Parser<Dynamic>>,
-  evalSet: List<Parser<Dynamic>>
+  headParser: Parser<Dynamic,Dynamic>,
+  involvedSet: List<Parser<Dynamic,Dynamic>>,
+  evalSet: List<Parser<Dynamic,Dynamic>>
 }
 
 class Parsers {
   
-  public static function mkLR<T>(seed: ParseResult<Dynamic>, rule: Parser<T>, head: Option<Head>) : LR return {
+  public static function mkLR<I,T>(seed: ParseResult<Dynamic,Dynamic>, rule: Parser<I,T>, head: Option<Head>) : LR return {
     seed: seed,
     rule: rule.castType(),
     head: head
   }
   
-  public static function mkHead<T>(p: Parser<T>) : Head return {
+  public static function mkHead<I,T>(p: Parser<I,T>) : Head return {
     headParser: p.castType(),
     involvedSet: List.nil(),
     evalSet: List.nil()
   }
   
-  public static function getPos(lr : LR) : Input return 
+  public static function getPos(lr : LR) : Input<Dynamic> return 
     switch(lr.seed) {
       case Success(_, rest): rest;
       case Failure(_, rest, _): rest;
     }
 
-  public static function getHead<T>(hd : Head) : Parser<T> return 
+  public static function getHead<I,T>(hd : Head) : Parser<I,T> return 
     hd.headParser.castType()
     
   static var _parserUid = 0;
@@ -226,7 +226,7 @@ class Parsers {
   }
   
   
-  static function lrAnswer<T>(p: Parser<T>, genKey : Int -> String, input: Input, growable: LR): ParseResult<T> {
+  static function lrAnswer<I,T>(p: Parser<I,T>, genKey : Int -> String, input: Input<I>, growable: LR): ParseResult<I,T> {
     switch (growable.head) {
       case None: throw "lrAnswer with no head!!";
       case Some(head): 
@@ -244,7 +244,7 @@ class Parsers {
     }
   }
   
-  static function recall<T>(p : Parser<T>, genKey : Int -> String, input : Input) : Option<MemoEntry> {
+  static function recall<I,T>(p : Parser<I,T>, genKey : Int -> String, input : Input<I>) : Option<MemoEntry> {
     var cached = input.getFromCache(genKey);
     switch (input.getRecursionHead()) {
       case None: return cached;
@@ -263,7 +263,7 @@ class Parsers {
     }
   }
   
-  static function setupLR(p: Parser<Dynamic>, input: Input, recDetect: LR) {
+  static function setupLR<I>(p: Parser<I,Dynamic>, input: Input<I>, recDetect: LR) {
     if (recDetect.head == None)
       recDetect.head = Some(p.mkHead());
     
@@ -278,7 +278,7 @@ class Parsers {
     }
   }
   
-  static function grow<T>(p: Parser<T>, genKey : Int -> String, rest: Input, head: Head): ParseResult<T> {
+  static function grow<I,T>(p: Parser<I,T>, genKey : Int -> String, rest: Input<I>, head: Head): ParseResult<I,T> {
     //store the head into the recursionHeads
     rest.setRecursionHead(head);
     var oldRes =
@@ -324,12 +324,12 @@ class Parsers {
   /**
    * Lift a parser to a packrat parser (memo is derived from scala's library)
    */
-  public static function memo<T>(_p : Void -> Parser<T>) : Void -> Parser<T>
+  public static function memo<I,T>(_p : Void -> Parser<I,T>) : Void -> Parser<I,T>
     ({
       // generates an uid for this parser.
       var uid = parserUid();
       function genKey(pos : Int) return uid+"@"+pos;
-      function (input :Input) {
+      function (input :Input<I>) {
         
         switch (recall(_p(), genKey, input)) {
           case None :
@@ -364,15 +364,15 @@ class Parsers {
       };
     }).lazy()
   
-  public static function fail<T>(error : String, isError : Bool) : Void -> Parser <T>
-    (function (input :Input) return Failure(error.errorAt(input).newStack(), input, isError)).lazy()
+  public static function fail<I,T>(error : String, isError : Bool) : Void -> Parser <I,T>
+    (function (input :Input<I>) return Failure(error.errorAt(input).newStack(), input, isError)).lazy()
 
-  public static function success<T>(v : T) : Void -> Parser <T>
+  public static function success<I,T>(v : T) : Void -> Parser <I,T>
     (function (input) return Success(v, input)).lazy()
 
-  public static function identity<T>(p : Void -> Parser<T>) : Void -> Parser <T> return p
+  public static function identity<I,T>(p : Void -> Parser<I,T>) : Void -> Parser <I,T> return p
 
-  public static function andWith < T, U, V > (p1 : Void -> Parser<T>, p2 : Void -> Parser<U>, f : T -> U -> V) : Void -> Parser <V>
+  public static function andWith < I, T, U, V > (p1 : Void -> Parser<I,T>, p2 : Void -> Parser<I,U>, f : T -> U -> V) : Void -> Parser <I,V>
     ({
       function (input) {
         var res = p1()(input);
@@ -388,22 +388,22 @@ class Parsers {
       }
     }).lazy()
 
-  inline public static function and < T, U > (p1 : Void -> Parser<T>, p2 : Void -> Parser<U>) : Void -> Parser < Tuple2 < T, U >> return
+  inline public static function and < I, T, U > (p1 : Void -> Parser<I,T>, p2 : Void -> Parser<I,U>) : Void -> Parser < I, Tuple2 < T, U >> return
     andWith(p1, p2, Tuples.t2)
 
     
   inline static function sndParam<A,B>(_, b) return b
     
-  inline public static function _and < T, U > (p1 : Void -> Parser<T>, p2 : Void -> Parser<U>) : Void -> Parser < U > return
+  inline public static function _and < I , T, U > (p1 : Void -> Parser<I,T>, p2 : Void -> Parser<I,U>) : Void -> Parser < I, U > return
     andWith(p1, p2, sndParam)
 
   inline static function fstParam<A,B>(a, _) return a
 
-  inline public static function and_ < T, U > (p1 : Void -> Parser<T>, p2 : Void -> Parser<U>) : Void -> Parser < T > return
+  inline public static function and_ < I,T, U > (p1 : Void -> Parser<I,T>, p2 : Void -> Parser<I,U>) : Void -> Parser < I,T > return
     andWith(p1, p2, fstParam)
 
   // aka flatmap
-  public static function andThen < T, U > (p1 : Void -> Parser<T>, fp2 : T -> (Void -> Parser<U>)) : Void -> Parser < U >
+  public static function andThen < I, T, U > (p1 : Void -> Parser<I,T>, fp2 : T -> (Void -> Parser<I,U>)) : Void -> Parser < I,U >
     ({
       function (input) {
         var res = p1()(input);
@@ -415,7 +415,7 @@ class Parsers {
     }).lazy()
 
   // map
-  public static function then < T, U > (p1 : Void -> Parser<T>, f : T -> U) : Void -> Parser < U >
+  public static function then < I, T, U > (p1 : Void -> Parser<I,T>, f : T -> U) : Void -> Parser < I, U >
     ({
       function (input) {
         var res = p1()(input);
@@ -432,13 +432,13 @@ class Parsers {
   static function forPredicate<T>(pred : T -> Bool) return function (x : T) return
     pred(x) ? success(x) : defaultFail  
     
-  inline public static function filter<T>(p : Void -> Parser<T>, pred : T -> Bool) : Void -> Parser <T> return
+  inline public static function filter<I,T>(p : Void -> Parser<I,T>, pred : T -> Bool) : Void -> Parser <I,T> return
     andThen(p, forPredicate(pred))
   
   /**
    * Generates an error if the parser returns a failure (an error make the choice combinator fail with an error without evaluating alternatives).
    */
-  public static function commit < T > (p1 : Void -> Parser<T>) : Void -> Parser < T >
+  public static function commit < I,T > (p1 : Void -> Parser<I,T>) : Void -> Parser < I, T >
     ( {
       function (input) {        
         var res = p1()(input);
@@ -450,7 +450,7 @@ class Parsers {
       }
     }).lazy()
   
-  public static function or < T > (p1 : Void -> Parser<T>, p2 : Void -> Parser<T>) : Void -> Parser < T >
+  public static function or < I, T > (p1 : Void -> Parser<I,T>, p2 : Void -> Parser<I,T>) : Void -> Parser < I, T >
     ({
       function (input) {
         var res = p1()(input);
@@ -467,7 +467,7 @@ class Parsers {
   }
 */    
   // unrolled vesion of the above one
-  public static function ors<T>(ps : Array < Void -> Parser<T> > ) : Void -> Parser<T>
+  public static function ors<I,T>(ps : Array < Void -> Parser<I,T> > ) : Void -> Parser<I,T>
     ({
       function (input) {
         var pIndex = 0;
@@ -486,7 +486,7 @@ class Parsers {
   /*
    * 0..n
    */
-  public static function many < T > (p1 : Void -> Parser<T>) : Void -> Parser < Array<T> >
+  public static function many < I,T > (p1 : Void -> Parser<I,T>) : Void -> Parser < I, Array<T> >
     ( {
       function (input) {
         var parser = p1();
@@ -512,32 +512,32 @@ class Parsers {
   /*
    * 1..n
    */
-  inline public static function oneMany < T > (p1 : Void -> Parser<T>) : Void -> Parser < Array<T> > return
+  inline public static function oneMany < I, T > (p1 : Void -> Parser<I,T>) : Void -> Parser < I, Array<T> > return
     filter(many(p1), notEmpty)
 
   /*
    * 0..n
    */
-  public static function rep1sep < T > (p1 : Void -> Parser<T>, sep : Void -> Parser<Dynamic> ) : Void -> Parser < Array<T> > return    
+  public static function rep1sep < I, T > (p1 : Void -> Parser<I,T>, sep : Void -> Parser<I,Dynamic> ) : Void -> Parser < I, Array<T> > return    
     then(and(p1, many(_and(sep, p1))), function (t) { t.b.insert(0, t.a); return t.b;}) /* Optimize that! */
 
   /*
    * 0..n
    */
-  public static function repsep < T > (p1 : Void -> Parser<T>, sep : Void -> Parser<Dynamic> ) : Void -> Parser < Array<T> > return
+  public static function repsep < I, T > (p1 : Void -> Parser<I,T>, sep : Void -> Parser<I,Dynamic> ) : Void -> Parser < I, Array<T> > return
     or(rep1sep(p1, sep), success([]))
 
   /*
    * 0..1
    */
-  public static function option < T > (p1 : Void -> Parser<T>) : Void -> Parser < Option<T> > return
+  public static function option < I, T > (p1 : Void -> Parser<I,T>) : Void -> Parser < I, Option<T> > return
     p1.then(Some).or(success(None))
 
-  public static function trace<T>(p : Void -> Parser<T>, f : T -> String) : Void -> Parser<T> return
+  public static function trace<I,T>(p : Void -> Parser<I,T>, f : T -> String) : Void -> Parser<I,T> return
     then(p, function (x) { trace(f(x)); return x;} )
 
-  public static function identifier(x : String) : Void -> Parser<String>
-    (function (input : Input)
+  public static function identifier(x : String) : Void -> Parser<String,String>
+    (function (input : Input<String>)
       if (input.startsWith(x)) {
         return Success(x, input.drop(x.length));
       } else {
@@ -545,8 +545,8 @@ class Parsers {
       }
     ).lazy()
 
-  public static function regexParser(r : EReg) : Void -> Parser<String>
-    (function (input : Input) return
+  public static function regexParser(r : EReg) : Void -> Parser<String,String>
+    (function (input : Input<String>) return
       if (input.matchedBy(r)) {
         var pos = r.matchedPos();
         if (pos.pos == 0) {
@@ -559,8 +559,8 @@ class Parsers {
       }
     ).lazy()
 
-  public static function withError<T>(p : Void -> Parser<T>, f : String -> String ) : Void -> Parser<T>
-    (function (input : Input) {
+  public static function withError<I,T>(p : Void -> Parser<I,T>, f : String -> String ) : Void -> Parser<I,T>
+    (function (input : Input<I>) {
       var r = p()(input);
       switch(r) {
         case Failure(err, input, isError): return Failure(err.report((f(err.head.msg)).errorAt(input)), input, isError);
@@ -568,7 +568,8 @@ class Parsers {
       }
     }).lazy()
     
-  public static function tag<T>(p : Void -> Parser<T>, tag : String) : Void -> Parser<T> return  
+  public static function tag<I,T>(p : Void -> Parser<I,T>, tag : String) : Void -> Parser<I,T> return  
     withError(p, function (_) return tag +" expected")
   
 }
+  
