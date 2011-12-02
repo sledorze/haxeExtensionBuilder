@@ -1,4 +1,4 @@
 [submodule "dep/stax"]
 	path = dep/stax
-	url = git@github.com:sledorze/stax.git
+	url = git://github.com/sledorze/stax.git
                               
