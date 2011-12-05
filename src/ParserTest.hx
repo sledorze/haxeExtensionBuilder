@@ -69,7 +69,7 @@ class JsonParser {
   static  var equalsP = withSpacing(",".identifier());
   
   
-  static function withSpacing<T>(p : Void -> Parser<T>) return
+  static function withSpacing<I,T>(p : Void -> Parser<String,T>) return
     spacingP._and(p)
 
   static var identifierP =
@@ -78,7 +78,7 @@ class JsonParser {
   static var jsonDataP =
     identifierP.then(JsData);
     
-  static var jsonValueP : Void -> Parser<JsValue> =
+  static var jsonValueP : Void -> Parser<String,JsValue> =
     [jsonParser, jsonDataP, jsonArrayP].ors().tag("json value").lazyF();
 
   static var jsonArrayP =
@@ -105,12 +105,12 @@ class LRTest {
   static var posNumberP = posNumberR.regexParser().tag("number");
     
   static var binop = (expr.and_(plusP)).andWith(expr.commit(), function (a, b) return a + " + " + b).tag("binop").lazyF();
-  public static var expr : Void -> Parser<String> = binop.or(posNumberP).memo().tag("expression");
+  public static var expr : Void -> Parser<String,String> = binop.or(posNumberP).memo().tag("expression");
 }
 
 class ParserTest {
 
-  static function tryParse<T>(str : String, parser : Parser<T>, withResult : T -> Void, output : String -> Void) {
+  static function tryParse<T>(str : String, parser : Parser<String,T>, withResult : T -> Void, output : String -> Void) {
     try {
       switch (parser(str.reader())) {
         case Success(res, rest):
