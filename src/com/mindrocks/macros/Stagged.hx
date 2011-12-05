@@ -95,6 +95,8 @@ class Stagged {
           for (field in fields) {
             substitueField(field, subs);
           }
+        case TOptional(ct):
+          substitueComplexType(ct, subs);
       }
     }
   }
