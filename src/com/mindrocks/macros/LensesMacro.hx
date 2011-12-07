@@ -45,7 +45,7 @@ class Helper {
       case TFun( args , ret ) : throw "lenses for function do not makes sense";
 	    case TAnonymous( a ) : a.get().fields;
 	    case TDynamic( t ) : throw "lenses for Dynamic do not make sense"; // or a dynamic way to support it
-	    case TLazy( f ) : throw "lenses for lazy not supported";
+	    case TLazy( f ) : classFieldsFor(f());
     }
 
   public static function lenseForClassField(extensionType : Type, c : ClassField, pos : Position) : Field {

@@ -28,6 +28,24 @@ class Stagged {
     }
   }
 
+  static function substitueName(name : String, subs : Array<{field : String, expr : Expr }>) {
+    for (sub in subs) {
+      if (sub.field == name) {
+        switch (sub.expr.expr) {
+          case EConst(v):
+            switch (v) {
+              case CString( s ): return s;
+	            case CIdent( s ): return s;
+	            case CType( s ): return s;
+              default:
+            }
+          default:
+        }
+      }
+    }
+    return name;
+  }
+
   static function substitueTypeParam(tp : TypeParam, subs : Array<{field : String, expr : Expr }>) {
     switch (tp) {
       case TPType( ct ) : substitueComplexType(ct, subs);
@@ -42,7 +60,8 @@ class Stagged {
   }
 
   static function substitueFunc(func : Function, subs : Array<{field : String, expr : Expr }>) {
-    for (arg in func.args) {      
+    for (arg in func.args) {
+      arg.name = substitueName(arg.name, subs);
       substitueComplexType(arg.type, subs);
       substitueExp(arg.value, subs);
     }
@@ -65,6 +84,7 @@ class Stagged {
       case FFun(f):
         substitueExp(f.expr, subs);
         for (funArg in f.args) {
+          funArg.name = substitueName(funArg.name, subs);
           substitueComplexType(funArg.type, subs);
           substitueExp(funArg.value, subs);
         }
@@ -113,15 +133,28 @@ class Stagged {
                 if (sub.field == name) {
                   try {
                     
-                    var isExpr =
+                    var handled =
                       switch (sub.expr.typeof()) {
-                        case TObject: sub.expr.expr != null && sub.expr.pos != null ; // great chance it's an Expr..
+                        case TObject:
+                          if (sub.expr.expr != null && sub.expr.pos != null) { // great chance it's an Expr..
+                            src.expr = sub.expr.expr;
+                            true;
+                          } else false;
+                        case TEnum(_):
+                          if (Std.is(sub.expr, ExprDef)) {
+                            src.expr = untyped sub.expr;
+                          };
+                          true;
                         default: false;
                       };
-                    // trace("sub.expr " + Std.string(sub.expr));
-                    // trace("name " + name + ": " + isExpr);
+                      
+                    trace("sub.expr " + Std.string(sub.expr));
+                    trace("sub.expr.typeof() " + Std.string(sub.expr.typeof()));
                     
-                    src.expr = isExpr?  sub.expr.expr : Context.makeExpr(sub.expr, src.pos).expr;
+                    trace("name " + name + ": " + handled);
+                    if (!handled) {
+                      src.expr = Context.makeExpr(sub.expr, src.pos).expr;
+                    }
                     
                   } catch (e : Dynamic) {
                     trace("Error while substitution" + name);

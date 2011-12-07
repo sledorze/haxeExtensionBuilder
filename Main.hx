@@ -10,8 +10,8 @@ class Main {
 	static function main() {
 
 //    LangParser.langTest();
-    
-    ParserTest.jsonTest();
+    MonadTest.compilationTest();
+//    ParserTest.jsonTest();
     // StructureTest.test();
     // MergeTest.compilationTest();
     // JsonTest.compilationTest();    
