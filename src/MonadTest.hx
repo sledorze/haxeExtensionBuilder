@@ -7,33 +7,25 @@ package ;
 
 import com.mindrocks.functional.Functional;
 
-class OptionIsAMonad {
-  public static function return_ <T>(x : T) : Option<T> return Some(x)
-  
-  public static function bind_  < T, U > (x : Option<T>, f : T -> Option<U>) : Option<U> {
-    switch (x) {
-      case Some(v) : return f(v);
-      case None : return None;
-    }
-  }
-}
+using com.mindrocks.functional.Functional;
 
 import com.mindrocks.macros.MonadSugarMacro;
 using com.mindrocks.macros.MonadSugarMacro;
  
 class MonadTest {
 
+  
   public static function compilationTest() {
     
     var res =
-      MonadSugarMacro.monad(
-        {
-          value <= Some(55);
-          Some(value + 5);
-        },
-        OptionIsAMonad
-      ); 
-      
+      D.o({
+        value <= Some(55);
+        trace("value " + value);
+        value <= Some(value * 2);
+        trace("value " + value);
+        Some(value + 5);
+      }); 
+    
     trace("result " + Std.string(res));
   }
   
