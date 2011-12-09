@@ -19,9 +19,9 @@ enum Option<T> {
 typedef Lazy<T> = Void -> T
 
 class OptionIsAMonad {
-  public static function return_ <T>(x : T) : Option<T> return Some(x)
+//  public static function return_ <T>(x : T) : Option<T> return Some(x)
   
-  public static function bind_  < T, U > (x : Option<T>, f : T -> Option<U>) : Option<U> {
+  public static function flatMap < T, U > (x : Option<T>, f : T -> Option<U>) : Option<U> {
     switch (x) {
       case Some(v) : return f(v);
       case None : return None;

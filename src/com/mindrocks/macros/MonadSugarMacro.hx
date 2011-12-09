@@ -44,7 +44,7 @@ class D {
                 var rest = mk(EBlock(nexts));
                 var func = EFunction(null, { args : [ { name : name, type : null, opt : false, value : null } ], ret : null, expr : "{ return $rest; }".stagged(), params : []} );
 
-                return ["{ ($r).bind_($func); }".stagged()];
+                return ["{ ($r).flatMap($func); }".stagged()];
               }
               
             default :
