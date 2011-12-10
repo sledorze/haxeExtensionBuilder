@@ -4,7 +4,7 @@ import com.mindrocks.text.InputStream;
 import com.mindrocks.functional.Functional;
 using com.mindrocks.functional.Functional;
 
-
+import com.mindrocks.macros.LazyMacro;
 using Lambda;
 import haxe.data.collections.List; // reimplement minimal version.
 
@@ -322,7 +322,7 @@ class Parsers {
    * Lift a parser to a packrat parser (memo is derived from scala's library)
    */
   public static function memo<I,T>(_p : Void -> Parser<I,T>) : Void -> Parser<I,T>
-    ({
+    return LazyMacro.lazy({
       // generates an uid for this parser.
       var uid = parserUid();
       function genKey(pos : Int) return uid+"@"+pos;
@@ -359,18 +359,18 @@ class Parsers {
         }
         
       };
-    }).lazy()
+    })
   
-  public static function fail<I,T>(error : String, isError : Bool) : Void -> Parser <I,T>
-    (function (input :Input<I>) return Failure(error.errorAt(input).newStack(), input, isError)).lazy()
+  public static function fail < I, T > (error : String, isError : Bool) : Void -> Parser <I,T>
+    return LazyMacro.lazy(function (input :Input<I>) return Failure(error.errorAt(input).newStack(), input, isError))
 
   public static function success<I,T>(v : T) : Void -> Parser <I,T>
-    (function (input) return Success(v, input)).lazy()
+    return LazyMacro.lazy(function (input) return Success(v, input))
 
   public static function identity<I,T>(p : Void -> Parser<I,T>) : Void -> Parser <I,T> return p
 
   public static function andWith < I, T, U, V > (p1 : Void -> Parser<I,T>, p2 : Void -> Parser<I,U>, f : T -> U -> V) : Void -> Parser <I,V>
-    ({
+    return LazyMacro.lazy({
       function (input) {
         var res = p1()(input);
         switch (res) {
@@ -383,7 +383,7 @@ class Parsers {
           case Failure(_, _, _): return res.castType();
         }
       }
-    }).lazy()
+    })
 
   inline public static function and < I, T, U > (p1 : Void -> Parser<I,T>, p2 : Void -> Parser<I,U>) : Void -> Parser < I, Tuple2 < T, U >> return
     andWith(p1, p2, Tuples.t2)
@@ -401,7 +401,7 @@ class Parsers {
 
   // aka flatmap
   public static function andThen < I, T, U > (p1 : Void -> Parser<I, T>, fp2 : T -> (Void -> Parser<I, U>)) : Void -> Parser < I, U >
-    ({
+    return LazyMacro.lazy({
       function (input) {
         var res = p1()(input);
         switch (res) {
@@ -409,11 +409,11 @@ class Parsers {
           case Failure(_, _, _): return res.castType();
         }
       }
-    }).lazy()
+    })
 
   // map
   public static function then < I, T, U > (p1 : Void -> Parser<I,T>, f : T -> U) : Void -> Parser < I, U >
-    ({
+    return LazyMacro.lazy({
       function (input) {
         var res = p1()(input);
         switch (res) {
@@ -421,7 +421,7 @@ class Parsers {
           case Failure(_, _, _): return res.castType();
         };
       }
-    }).lazy()
+    })
 
   static var defaultFail =
     fail("not matched", false);
@@ -436,7 +436,7 @@ class Parsers {
    * Generates an error if the parser returns a failure (an error make the choice combinator fail with an error without evaluating alternatives).
    */
   public static function commit < I, T > (p1 : Void -> Parser<I,T>) : Void -> Parser < I, T >
-    ( {
+    return LazyMacro.lazy( {
       function (input) {        
         var res = p1()(input);
         switch(res) {
@@ -445,10 +445,10 @@ class Parsers {
             return (isError || (err.last.msg == baseFailure))  ? res : Failure(err, rest, true);
         }
       }
-    }).lazy()
+    })
   
   public static function or < I,T > (p1 : Void -> Parser<I,T>, p2 : Void -> Parser<I,T>) : Void -> Parser < I, T >
-    ({
+    return LazyMacro.lazy({
       function (input) {
         var res = p1()(input);
         switch (res) {
@@ -456,7 +456,7 @@ class Parsers {
           case Failure(_, _, isError) : return isError ? res : p2()(input); // isError means that we commited to a parser that failed; this reports to the top..
         };
       }
-    }).lazy()
+    })
   
 /*
   public static function ors<T>(ps : Array < Void -> Parser<T> > ) : Void -> Parser<T> return {
@@ -465,7 +465,7 @@ class Parsers {
 */    
   // unrolled vesion of the above one
   public static function ors<I,T>(ps : Array < Void -> Parser<I,T> > ) : Void -> Parser<I,T>
-    ({
+    return LazyMacro.lazy({
       function (input) {
         var pIndex = 0;
         while (pIndex < ps.length) {
@@ -478,13 +478,13 @@ class Parsers {
         }
         return Failure("none match".errorAt(input).newStack(), input, false);
       }
-    }).lazy()
+    })
     
   /*
    * 0..n
    */
   public static function many < I,T > (p1 : Void -> Parser<I,T>) : Void -> Parser < I, Array<T> >
-    ( {
+    return LazyMacro.lazy( {
       function (input) {
         var parser = p1();
         var arr = [];
@@ -502,7 +502,7 @@ class Parsers {
         }
         return Success(arr, input);
       }
-    }).lazy()
+    })
 
     
   static function notEmpty<T>(arr:Array<T>) return arr.length>0
@@ -534,16 +534,16 @@ class Parsers {
     then(p, function (x) { trace(f(x)); return x;} )
 
   public static function identifier(x : String) : Void -> Parser<String,String>
-    (function (input : Input<String>)
+    return LazyMacro.lazy(function (input : Input<String>)
       if (input.startsWith(x)) {
         return Success(x, input.drop(x.length));
       } else {
         return Failure((x + " expected and not found").errorAt(input).newStack(), input, false);
       }
-    ).lazy()
+    )
 
   public static function regexParser(r : EReg) : Void -> Parser<String,String>
-    (function (input : Input<String>) return
+    return LazyMacro.lazy(function (input : Input<String>) return
       if (input.matchedBy(r)) {
         var pos = r.matchedPos();
         if (pos.pos == 0) {
@@ -554,16 +554,16 @@ class Parsers {
       } else {
         Failure((r + " not matched").errorAt(input).newStack(), input, false);
       }
-    ).lazy()
+    )
 
   public static function withError<I,T>(p : Void -> Parser<I,T>, f : String -> String ) : Void -> Parser<I,T>
-    (function (input : Input<I>) {
+    return LazyMacro.lazy(function (input : Input<I>) {
       var r = p()(input);
       switch(r) {
         case Failure(err, input, isError): return Failure(err.report((f(err.head.msg)).errorAt(input)), input, isError);
         default: return r;
       }
-    }).lazy()
+    })
     
   public static function tag<I,T>(p : Void -> Parser<I,T>, tag : String) : Void -> Parser<I,T> return  
     withError(p, function (_) return tag +" expected")

@@ -148,10 +148,10 @@ class Staged {
                         default: false;
                       };
                       
-                    trace("sub.expr " + Std.string(sub.expr));
-                    trace("sub.expr.typeof() " + Std.string(sub.expr.typeof()));
+                    //trace("sub.expr " + Std.string(sub.expr));
+                    //trace("sub.expr.typeof() " + Std.string(sub.expr.typeof()));
                     
-                    trace("name " + name + ": " + handled);
+                    //trace("name " + name + ": " + handled);
                     if (!handled) {
                       src.expr = Context.makeExpr(sub.expr, src.pos).expr;
                     }
@@ -289,7 +289,7 @@ class Staged {
     var mappings =  "{ " + identifiers.map(function (str) return str + " : " + str).join(", ") + " }";
     
     var setMappings = "Staged.setMappings(" + mappings + ");";
-    var stagedCall = "{"+setMappings+"Staged.make( " + code + ", " + id + "); Stagged.get("+id+"); }";
+    var stagedCall = "{"+setMappings+"Staged.make( " + code + ", " + id + "); Staged.get("+id+"); }";
     return Context.parse(stagedCall, Context.currentPos());
   }
 
