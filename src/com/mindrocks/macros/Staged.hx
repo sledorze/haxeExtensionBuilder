@@ -13,7 +13,7 @@ using Type;
 using Lambda;
 using Std;
 
-class Stagged {
+class Staged {
 
   static function extractLookup(b : Expr) : Array<{ field : String, expr : Expr }> return {
     switch(b.expr) {
@@ -226,12 +226,12 @@ class Stagged {
   }
   
   private static var mapping : Array<Dynamic> = [];
-  private static var staggedRes : Array<{ id : Int, expr : Expr }> = [];
+  private static var stagedRes : Array<{ id : Int, expr : Expr }> = [];
   private static var lastReturned : Expr = null;
 
 	public static function __init__() {
 		if (mapping == null) mapping = [];
-		if (staggedRes == null) staggedRes = [];
+		if (stagedRes == null) stagedRes = [];
 	}
   public static function setMappings(m : Dynamic) {
     mapping.push(m);
@@ -241,12 +241,12 @@ class Stagged {
   }
 
   public static function set(id : Int, m : Expr) {
-    staggedRes.push({ id : id , expr : m });
+    stagedRes.push({ id : id , expr : m });
   }  
   public static function get(id : Int) : Expr {
-    var last = staggedRes[staggedRes.length - 1]; // it's more complicated than a basic stack because of code explosion and access..
+    var last = stagedRes[stagedRes.length - 1]; // it's more complicated than a basic stack because of code explosion and access..
     if (last != null && id == last.id) {
-      lastReturned = staggedRes.pop().expr;
+      lastReturned = stagedRes.pop().expr;
     }
     return lastReturned;
   }
@@ -266,12 +266,12 @@ class Stagged {
     
     executeNext = false;    
     // code explosion but it's at generation time, so maybe worst the burden..
-    return Context.parse('{if (Stagged.executeNext==true) {
-      Stagged.stagged("'+initialCode+'",' + (id+1) + ');
-    } else { Stagged.executeNext = true; }; } ', Context.currentPos());
+    return Context.parse('{if (Staged.executeNext==true) {
+      Staged.staged("'+initialCode+'",' + (id+1) + ');
+    } else { Staged.executeNext = true; }; } ', Context.currentPos());
   }
   
-  @:macro public static function stagged(code : String, ?id : Int = 0) : Expr {
+  @:macro public static function staged(code : String, ?id : Int = 0) : Expr {
     initialCode = code;
 
     var identifiers = {
@@ -292,9 +292,9 @@ class Stagged {
     
     var mappings =  "{ " + identifiers.map(function (str) return str + " : " + str).join(", ") + " }";
     
-    var setMappings = "Stagged.setMappings(" + mappings + ");";
-    var staggedCall = "{"+setMappings+"Stagged.make( " + code + ", " + id + "); Stagged.get("+id+"); }";
-    return Context.parse(staggedCall, Context.currentPos());
+    var setMappings = "Staged.setMappings(" + mappings + ");";
+    var stagedCall = "{"+setMappings+"Staged.make( " + code + ", " + id + "); Staged.get("+id+"); }";
+    return Context.parse(stagedCall, Context.currentPos());
   }
 
 }
