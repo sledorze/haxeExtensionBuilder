@@ -4,8 +4,8 @@ import haxe.macro.Context;
 import haxe.macro.Expr;
 import haxe.macro.Type;
 
-import com.mindrocks.macros.Stagged;
-using com.mindrocks.macros.Stagged;
+import com.mindrocks.macros.Staged;
+using com.mindrocks.macros.Staged;
 
 /**
  * ...
@@ -41,7 +41,7 @@ class LazyMacro {
           return value;
         };
       }
-      ".stagged();
+      ".staged();
 //    }
   }
 
@@ -56,7 +56,7 @@ class LazyMacro {
         return value;
       };
     }
-    ".stagged();
+    ".staged();
   }
 
 }
