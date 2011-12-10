@@ -1,7 +1,7 @@
 package ;
 
-import com.mindrocks.macros.Stagged;
-using com.mindrocks.macros.Stagged;
+import com.mindrocks.macros.Staged;
+using com.mindrocks.macros.Staged;
 import haxe.macro.Expr;
 import haxe.macro.Context;
 
@@ -13,7 +13,7 @@ using Lambda;
  * @author sledorze
  */
 
-class StaggedTestMacros {
+class StagedTestMacros {
 
   @:macro public static function forExample2(init : Expr, cond : Expr, inc : Expr, body : Expr, nb : Int = 5) : Expr return {
     
@@ -23,7 +23,7 @@ class StaggedTestMacros {
       var localExpr =
         "{
           trace('wow' + $ind);
-        }".stagged();
+        }".staged();
         
       arr.push(
         "{
@@ -39,7 +39,7 @@ class StaggedTestMacros {
             }
           }
           oneTime();
-        }".stagged()
+        }".staged()
       );
     }
     
