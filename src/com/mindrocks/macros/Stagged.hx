@@ -229,6 +229,10 @@ class Stagged {
   private static var staggedRes : Array<{ id : Int, expr : Expr }> = [];
   private static var lastReturned : Expr = null;
 
+	public static function __init__() {
+		if (mapping == null) mapping = [];
+		if (staggedRes == null) staggedRes = [];
+	}
   public static function setMappings(m : Dynamic) {
     mapping.push(m);
   }
