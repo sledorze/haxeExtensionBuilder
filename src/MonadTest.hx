@@ -38,6 +38,6 @@ class MonadTest {
       });
       
     trace("result " + Std.string(res)); // MonadTest.hx:40: result Some(233)
-    trace("result2 " + Std.string(res2)); // MonadTest.hx:41: result2 [10,20,30,11,21,31,12,22,32]  }
-  
-} 
+    trace("result2 " + Std.string(res2)); // MonadTest.hx:41: result2 [10,20,30,11,21,31,12,22,32]
+  }  
+}

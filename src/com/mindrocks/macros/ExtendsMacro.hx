@@ -67,7 +67,7 @@ class ExtendsMacro<T> {
     var additionalArg : FunctionArg = {
       var newType : ComplexType = {
         var extensionType = {
-          var clazz : ClassType = Context.getLocalClass().get();      
+          var clazz : ClassType = Context.getLocalClass().get();
           clazz.interfaces.filter(isExtension).array()[0].params[0];
         }
         ExtendsTypeMacroHelper.toComplexType(extensionType);

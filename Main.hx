@@ -9,8 +9,9 @@ class Main {
 	
 	static function main() {
 
+    ExternalFileFormat.processTest();
 //    LangParser.langTest();
-    MonadTest.compilationTest();
+//    MonadTest.compilationTest();
 //    ParserTest.jsonTest();
     // StructureTest.test();
     // MergeTest.compilationTest();
