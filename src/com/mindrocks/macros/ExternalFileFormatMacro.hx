@@ -1,8 +1,8 @@
 package com.mindrocks.macros;
 
 #if macro
+import haxe.macro.Context;
 import neko.io.File;
-using com.mindrocks.macros.Staged;
 #end
 /**
  * ...
@@ -11,16 +11,11 @@ using com.mindrocks.macros.Staged;
 
 class ExternalFileFormatMacro {
 
-  @:macro public static function format(src : String, params : Dynamic) {
+  @:macro public static function formatFile(src : String) {
     #if macro
-    var content = File.read(src).readAll().toString();
-    
-    var newExpr = "{
-      var context = $params;
-      Std.format($content);
-    }
-    ".staged();    
-    return newExpr;
+    var content = File.read(src).readAll().toString();    
+//    return Context.parse("Std.format('"+content+"')", Context.currentPos());
+    return Context.parse("Std.format('"+content+"')", Context.currentPos());
     #end
   }
   

@@ -10,8 +10,8 @@ class ExternalFileFormat {
 
   public static function processTest() {
     
-    var context = { toto : "c'est toto!" };
-    var result = "bin/testformat.html".format(context);
+    var toto = "c'est toto!";    
+    var result = "bin/testformat.html".formatFile();
     
     trace("result: " + result);
   }
