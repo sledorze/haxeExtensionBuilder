@@ -292,8 +292,7 @@ class Staged {
     
     var mappings =  "{ " + identifiers.map(function (str) return str + " : " + str).join(", ") + " }";
     
-    var setMappings = "Staged.setMappings(" + mappings + ");";
-    var stagedCall = "{"+setMappings+"Staged.make( " + code + ", " + id + "); Staged.get("+id+"); }";
+    var stagedCall = "{ Staged.setMappings(" + mappings + "); Staged.make( " + code + ", " + id + "); Staged.get("+id+"); }";
     return Context.parse(stagedCall, Context.currentPos());
   }
 
