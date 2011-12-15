@@ -101,10 +101,10 @@ class LambdaTest {
   static  var arrowP = withSpacing("=>".identifier());
   static  var dotP = ".".identifier();
   
-  static function maybeRet<T>(p : Void -> Parser<T>) return 
+  static function maybeRet<T>(p : Void -> Parser<String, T>) return 
     spacingOrRetP.option()._and(p)
     
-  static function withSpacing<T>(p : Void -> Parser<T>) return
+  static function withSpacing<T>(p : Void -> Parser<String, T>) return
     spacingP._and(p).lazyF()
 
   static var identifierP =
@@ -113,31 +113,31 @@ class LambdaTest {
   static  var letP = withSpacing("let".identifier()).lazyF();
   static  var inP = withSpacing("in".identifier()).lazyF();
   
-  static var identP : Void -> Parser<RExpression> =
+  static var identP : Void -> Parser<String, RExpression> =
     identifierP.then(function (id) return Ident(id)).tag("identifier").lazyF();
 
-  static var numberP : Void -> Parser<PrimitiveType> =
+  static var numberP : Void -> Parser<String, PrimitiveType> =
     numberR.regexParser().then(function (n) return Number(Std.parseInt(n)));
   
-  static var floatNumberP : Void -> Parser<PrimitiveType> = // TODO: change this!
+  static var floatNumberP : Void -> Parser<String, PrimitiveType> = // TODO: change this!
     numberP.and_(dotP).and(numberP).then(function (p) return FloatNumber(Std.parseFloat(p.a + "." + p.b)));
   
 // TODO
 //  static var stringP =
 //    stringStartP._and(    
     
-  static var primitiveP : Void -> Parser<RExpression> = [
+  static var primitiveP : Void -> Parser<String, RExpression> = [
       floatNumberP,
       numberP,
     ].ors().then(Primitive).tag("primitive").lazyF();
     
-  static var lambdaP : Void -> Parser<RExpression> =
+  static var lambdaP : Void -> Parser<String, RExpression> =
     identifierP.and_(arrowP).and(maybeRet(expressionP.commit())).then(function (p) return LambdaExpr(p.a, p.b)).tag("lambda").lazyF();
   
-  static var applicationP : Void -> Parser<RExpression> =
+  static var applicationP : Void -> Parser<String, RExpression> =
     rExpressionP.and(identifierP).then(function (p) return Apply(p.a, p.b)).tag("application").lazyF();
   
-  static var rExpressionP : Void -> Parser<RExpression> =
+  static var rExpressionP : Void -> Parser<String, RExpression> =
     [
       lambdaP,
       applicationP,
@@ -145,10 +145,10 @@ class LambdaTest {
       primitiveP
     ].ors().memo().tag("RExpression").lazyF();
     
-  static var letExpressionP : Void -> Parser<LetExpression> =
+  static var letExpressionP : Void -> Parser<String, LetExpression> =
     identifierP.and_(equalsP).and(maybeRet(rExpressionP.commit())).then(function (p) return { ident: p.a, expr: p.b }).tag("let expression").lazyF();
   
-  public static var expressionP : Void -> Parser<Expression> =
+  public static var expressionP : Void -> Parser<String, Expression> =
     (letP._and(maybeRet(maybeRet(letExpressionP).rep1sep(commaP.or(retP)).and_(commaP.option())).and_(maybeRet(inP)).commit())).option().and(maybeRet(rExpressionP)).then(function (p) {
       var lets =
         switch (p.a) {
@@ -169,7 +169,7 @@ class LambdaTest {
 
 class LangParser {
 
-  static function tryParse<T>(str : String, parser : Parser<T>, withResult : T -> Void, output : String -> Void) {
+  static function tryParse<T>(str : String, parser : Parser<String, T>, withResult : T -> Void, output : String -> Void) {
     try {
       var res = 
         Timer.measure(function () return parser(str.reader()));
@@ -233,7 +233,7 @@ class LangParser {
 //  Sensitive layout requiers another kind of parsing phase, .. and must provide a way to reorganize code while keeping position information / coherence (without the lexer phase!)
 //  Regarder ce qui avait ete propose pour les quotations et le layout.. (peut etre qq chose d'interessant a cette intersection.. -> Tree at language level)  
 
-// Compile-time et runtime stagging blurred.. type level manipulation to remove by param number repetition.
+// Compile-time et runtime staging blurred.. type level manipulation to remove by param number repetition.
 // Very lightweight code with runtime inlining (call site specification with depth limitation).
 // Type class approach (variables implicits and call site inlining).
 // Type states and phantom types.
@@ -243,5 +243,5 @@ class LangParser {
 // No inheritence! Structural typing (and good error report).
 // Monad support aka Higher order Kinds.
 // Operator overloading and free variable naming (think JSON - mongodb needs).
-// Dependent typing (almost thanks to stagging).
+// Dependent typing (almost thanks to staging).
 // Intuition; Neko makes it at the wrong level (should be web).

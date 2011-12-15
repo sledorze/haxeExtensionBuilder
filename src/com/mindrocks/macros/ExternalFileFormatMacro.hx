@@ -2,7 +2,7 @@ package com.mindrocks.macros;
 
 #if macro
 import neko.io.File;
-using com.mindrocks.macros.Stagged;
+using com.mindrocks.macros.Staged;
 #end
 /**
  * ...
@@ -19,7 +19,7 @@ class ExternalFileFormatMacro {
       var context = $params;
       Std.format($content);
     }
-    ".stagged();    
+    ".staged();    
     return newExpr;
     #end
   }
