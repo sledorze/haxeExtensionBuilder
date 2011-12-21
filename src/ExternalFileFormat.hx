@@ -1,6 +1,9 @@
 
 using com.mindrocks.macros.ExternalFileFormatMacro;
 
+import haxe.macro.Expr;
+import haxe.macro.Context;
+
 /**
  * ...
  * @author sledorze

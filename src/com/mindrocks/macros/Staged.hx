@@ -6,6 +6,7 @@ package com.mindrocks.macros;
  */
 import haxe.macro.Context;
 import haxe.macro.Expr;
+import haxe.macro.Tools;
 import haxe.macro.Type;
 
 #if macro
@@ -13,8 +14,12 @@ using Type;
 using Lambda;
 using Std;
 
-class Staged {
-
+class Substituer {
+  var transfo : Expr -> String -> Void;
+  public function new(transfo : Expr -> String -> Void) {
+    this.transfo = transfo;    
+  }
+  
   static function extractLookup(b : Expr) : Array<{ field : String, expr : Expr }> return {
     switch(b.expr) {
       case EObjectDecl(fields): fields;
@@ -22,13 +27,13 @@ class Staged {
     }
   }
   
-  static function substitueSeveral(src : Array<Expr>, subs : Array<{field : String, expr : Expr }>) {
+  function substitueSeveral(src : Array<Expr>) {
     for (exp in src) {
-      substitueExp(exp, subs);
+      substitueExp(exp);
     }
   }
-
-  static function substitueName(name : String, subs : Array<{field : String, expr : Expr }>) {
+/*
+  function substitueName(name : String) {
     for (sub in subs) {
       if (sub.field == name) {
         switch (sub.expr.expr) {
@@ -45,185 +50,156 @@ class Staged {
     }
     return name;
   }
-
-  static function substitueTypeParam(tp : TypeParam, subs : Array<{field : String, expr : Expr }>) {
+*/
+  function substitueTypeParam(tp : TypeParam) {
     switch (tp) {
-      case TPType( ct ) : substitueComplexType(ct, subs);
-	    case TPExpr( e ) : substitueExp(e, subs);
+      case TPType( ct ) : substitueComplexType(ct);
+	    case TPExpr( e ) : substitueExp(e);
     }
   }
 
-  static function substitueTypePath(tp : TypePath, subs : Array<{field : String, expr : Expr }>) {
+  function substitueTypePath(tp : TypePath) {
     for (param in tp.params) {
-      substitueTypeParam(param, subs);
+      substitueTypeParam(param);
     }
   }
 
-  static function substitueFunc(func : Function, subs : Array<{field : String, expr : Expr }>) {
+  function substitueFunc(func : Function) {
     for (arg in func.args) {
-      arg.name = substitueName(arg.name, subs);
-      substitueComplexType(arg.type, subs);
-      substitueExp(arg.value, subs);
+  //    arg.name = substitueName(arg.name);
+      substitueComplexType(arg.type);
+      substitueExp(arg.value);
     }
-    substitueExp(func.expr, subs);
+    substitueExp(func.expr);
     for (param in func.params) {
       for (constraint in param.constraints) {
-        substitueComplexType(constraint, subs);
+        substitueComplexType(constraint);
       }
     }
   }
   
-  static function substitueField(field : Field, subs : Array<{field : String, expr : Expr }>) {
+  function substitueField(field : Field) {
     switch (field.kind) {
       case FVar(ct, e):
-        substitueComplexType(ct, subs);
-        substitueExp(e, subs);
+        substitueComplexType(ct);
+        substitueExp(e);
       case FProp(get, set, t, e):
-        substitueComplexType(t, subs);
-        substitueExp(e, subs);
+        substitueComplexType(t);
+        substitueExp(e);
       case FFun(f):
-        substitueExp(f.expr, subs);
+        substitueExp(f.expr);
         for (funArg in f.args) {
-          funArg.name = substitueName(funArg.name, subs);
-          substitueComplexType(funArg.type, subs);
-          substitueExp(funArg.value, subs);
+  //        funArg.name = substitueName(funArg.name);
+          substitueComplexType(funArg.type);
+          substitueExp(funArg.value);
         }
         for (param in f.params) {
           for (constraint in param.constraints) {
-            substitueComplexType(constraint, subs);
+            substitueComplexType(constraint);
           }
         }
     }    
   }
 
-  static function substitueComplexType(ct : ComplexType, subs : Array<{field : String, expr : Expr }>) {
+  function substitueComplexType(ct : ComplexType) {
     if (ct != null) {
       switch (ct) {
-        case TPath(tp): substitueTypePath(tp, subs);
-        case TParent(t): substitueComplexType(t, subs);
+        case TPath(tp): substitueTypePath(tp);
+        case TParent(t): substitueComplexType(t);
         case TFunction(args, ret):
           for (arg in args) {
-            substitueComplexType(arg, subs);
+            substitueComplexType(arg);
           }
-          substitueComplexType(ret, subs);
+          substitueComplexType(ret);
         case TExtend(tp, fields):
-          substitueTypePath(tp, subs);
+          substitueTypePath(tp);
           for (field in fields) {
-            substitueField(field, subs);
+            substitueField(field);
           }
         case TAnonymous(fields):
           for (field in fields) {
-            substitueField(field, subs);
+            substitueField(field);
           }
         case TOptional(ct):
-          substitueComplexType(ct, subs);
+          substitueComplexType(ct);
       }
     }
   }
-  
-  static function substitueExp(src : Expr, subs : Array<{field : String, expr : Expr }>) {
+    
+  public function substitueExp(src : Expr) {
     if (src == null) return;
     switch (src.expr) {
       case EConst( c ):
         switch (c) {
           case CIdent( identName ):
             if (identName.charAt(0) == '$') {
-              var name = identName.substr(1);
-              for (sub in subs) {
-                if (sub.field == name) {
-                  try {
-                    
-                    var handled =
-                      switch (sub.expr.typeof()) {
-                        case TObject:
-                          if (sub.expr.expr != null && sub.expr.pos != null) { // great chance it's an Expr..
-                            src.expr = sub.expr.expr;
-                            true;
-                          } else false;
-                        case TEnum(_):
-                          if (Std.is(sub.expr, ExprDef)) {
-                            src.expr = untyped sub.expr;
-                          };
-                          true;
-                        default: false;
-                      };
-                      
-                    trace("sub.expr " + Std.string(sub.expr));
-                    trace("sub.expr.typeof() " + Std.string(sub.expr.typeof()));
-                    
-                    trace("name " + name + ": " + handled);
-                    if (!handled) {
-                      src.expr = Context.makeExpr(sub.expr, src.pos).expr;
-                    }
-                    
-                  } catch (e : Dynamic) {
-                    trace("Error while substitution" + name);
-                  }
-                  break;
-                }
-              }
+              transfo(src, identName);
             }
           default:
         }
-      case EArray( e1, e2) : substitueExp(e1, subs); substitueExp(e2, subs);
-      case EBinop( op, e1, e2) : substitueExp(e1, subs); substitueExp(e2, subs);
-      case EField( e, field) : substitueExp(e, subs);
-      case EType( e, field) :  substitueExp(e, subs);
-      case EParenthesis( e ) :  substitueExp(e, subs);
+      case EArray( e1, e2) : substitueExp(e1); substitueExp(e2);
+      case EBinop( op, e1, e2) : substitueExp(e1); substitueExp(e2);
+      case EField( e, field) : substitueExp(e);
+      case EType( e, field) :  substitueExp(e);
+      case EParenthesis( e ) :  substitueExp(e);
       case EObjectDecl( fields) :
         for (field in fields)
-        substitueExp(field.expr, subs);
-      case EArrayDecl( values) : substitueSeveral(values, subs);
-      case ECall( e, params) :  substitueExp(e, subs); substitueSeveral(params, subs);
-      case ENew( t, params) : substitueSeveral(params, subs);
-      case EUnop( op, postFix, e ) : substitueExp(e, subs); 
+        substitueExp(field.expr);
+      case EArrayDecl( values) : substitueSeveral(values);
+      case ECall( e, params) :  substitueExp(e); substitueSeveral(params);
+      case ENew( t, params) : substitueSeveral(params);
+      case EUnop( op, postFix, e ) : substitueExp(e); 
       case EVars( vars):
         for (vr in vars) {
-          substitueExp(vr.expr, subs); 
+          substitueExp(vr.expr); 
         }
-      case EFunction( name, f) : substitueFunc(f, subs);        
-      case EBlock( exprs) : substitueSeveral(exprs, subs);
-      case EFor( it, expr):  substitueExp(it, subs); substitueExp(expr, subs); 
-      case EIn( e1, e2) : substitueExp(e1, subs); substitueExp(e2, subs);
-      case EIf( econd, eif, eelse): substitueExp(econd, subs); substitueExp(eif, subs); substitueExp(eelse, subs);
-      case EWhile( econd, e, normalWhile): substitueExp(econd, subs); substitueExp(e, subs);
+      case EFunction( name, f) : substitueFunc(f);        
+      case EBlock( exprs) : substitueSeveral(exprs);
+      case EFor( it, expr):  substitueExp(it); substitueExp(expr); 
+      case EIn( e1, e2) : substitueExp(e1); substitueExp(e2);
+      case EIf( econd, eif, eelse): substitueExp(econd); substitueExp(eif); substitueExp(eelse);
+      case EWhile( econd, e, normalWhile): substitueExp(econd); substitueExp(e);
       case ESwitch( e, cases, edef):
-        substitueExp(e, subs); 
+        substitueExp(e); 
         for (cas in cases) {
-          substitueExp(cas.expr, subs); 
+          substitueExp(cas.expr); 
         }        
-        substitueExp(edef, subs); 
+        substitueExp(edef); 
       case ETry( e, catches):
-        substitueExp(e, subs); 
+        substitueExp(e); 
         for (cat in catches) {
-          substitueExp(cat.expr, subs); 
+          substitueExp(cat.expr); 
         }        
       case EReturn(e):
-        substitueExp(e, subs); 
+        substitueExp(e); 
       case EBreak:
       case EContinue:
       case EUntyped( e):
-        substitueExp(e, subs); 
+        substitueExp(e); 
       case EThrow( e):
-        substitueExp(e, subs); 
+        substitueExp(e); 
       case ECast( e, t):
-        substitueExp(e, subs);
-        substitueComplexType(t, subs);
+        substitueExp(e);
+        substitueComplexType(t);
       case EDisplay( e, isCall):
-        substitueExp(e, subs);
+        substitueExp(e);
       case EDisplayNew(t): //: TypePath 
-        substitueTypePath(t, subs);
+        substitueTypePath(t);
 
       case ETernary( econd, eif, eelse):
-        substitueExp(econd, subs);
-        substitueExp(eif, subs);
-        substitueExp(eelse, subs);
+        substitueExp(econd);
+        substitueExp(eif);
+        substitueExp(eelse);
       case ECheckType( e, t):
-        substitueExp(e, subs);
-        substitueComplexType(t, subs);
+        substitueExp(e);
+        substitueComplexType(t);
     }
-
   }
+
+}
+
+class Staged {
+
   
   private static var mapping : Array<Dynamic> = [];
   private static var stagedRes : Array<{ id : Int, expr : Expr }> = [];
@@ -253,6 +229,57 @@ class Staged {
   
   static var initialCode : String = "";
 
+  static function fieldToExpr(subs : Array<{field : String, expr : Expr }>) return function (src : Expr, identName : String) {
+    var name = identName.substr(1);
+    for (sub in subs) {
+      if (sub.field == name) {
+        try {
+          trace("before " + Std.string(sub.expr));
+          var handled =
+            switch (sub.expr.typeof()) {
+              case TObject:
+                if (sub.expr.expr != null && sub.expr.pos != null) { // great chance it's an Expr..
+                  src.expr = sub.expr.expr;
+                  true;
+                } else false;
+              case TEnum(_):
+                if (Std.is(sub.expr, ExprDef)) {
+                  src.expr = untyped sub.expr;
+                };
+                true;
+              default: false;
+            };
+            
+          trace("sub.expr " + Std.string(sub.expr));
+          trace("sub.expr.typeof() " + Std.string(sub.expr.typeof()));
+          
+          trace("name " + name + ": " + handled);
+          if (!handled) {
+            src.expr = Context.makeExpr(sub.expr, src.pos).expr;
+          }
+          
+        } catch (e : Dynamic) {
+          trace("Error while substitution" + name);
+        }
+        break;
+      }
+    }
+  }
+
+  public static function subtituedWithExpForField(exp : Expr, arr : Array<{field : String, expr : Expr }>) {
+    trace("Subs " + arr);
+    new Substituer(fieldToExpr(arr)).substitueExp(exp);
+  }
+
+  public static function collectIdentifiers(exp : Expr) : Array<String> {
+    var res = [];
+    var subs = new Substituer(function (_, identifier) {
+      res.push(identifier);
+    });
+    subs.substitueExp(exp);
+    return res;
+  }
+  
   public static var executeNext = true;
   @:macro public static function make(exp : Expr, id : Int) : Expr {
     var arr = [];  
@@ -261,14 +288,21 @@ class Staged {
       arr.push( { field : field, expr : untyped Reflect.field(mappings, field) } );
     }
     
-    substitueExp(exp, arr);
+    subtituedWithExpForField(exp, arr);
     set(id, exp);
     
     executeNext = false;    
     // code explosion but it's at generation time, so maybe worst the burden..
-    return Context.parse('{if (Staged.executeNext==true) {
-      Staged.staged("'+initialCode+'",' + (id+1) + ');
-    } else { Staged.executeNext = true; }; } ', Context.currentPos());
+    return
+      Context.parse('{
+          if (Staged.executeNext==true) {
+            Staged.staged("'+initialCode+'",' + (id+1) + ');
+          } else {
+            Staged.executeNext = true;
+          };
+        }',
+        Context.currentPos()
+      );
   }
   
   @:macro public static function staged(code : String, ?id : Int = 0) : Expr {
@@ -294,6 +328,106 @@ class Staged {
     
     var stagedCall = "{ Staged.setMappings(" + mappings + "); Staged.make( " + code + ", " + id + "); Staged.get("+id+"); }";
     return Context.parse(stagedCall, Context.currentPos());
+  }
+
+  static var id = 0;
+  static function getId():String {
+    id++;
+    return "" + id;
+  }
+  private static var slice : Hash<Expr> = new Hash<Expr>();
+
+  public static function pushSlice(e : Expr) : String {
+    var id = getId();
+    slice.set(id, e);
+    return id;
+  }
+  public static function getSlice(id : String) : Expr {
+    return slice.get(id);
+  }
+  /*
+  static var slice2 : Expr = null;
+  public static function getSlice2() : Expr {
+    return slice2;
+  }
+  */
+  public static function mk(expDef : ExprDef) {
+    return { expr : expDef, pos : Context.currentPos() };
+  }
+  
+  /*
+  @:macro public static function stagedSimple(code : Expr, ?id : Int = 0) : Expr {
+    slice2 = code;
+    return
+      Context.parse(Std.format("{
+        cpy(Staged.getSlice2());
+      }"),
+      Context.currentPos()
+    );
+  }
+  */
+  
+  @:macro public static function staged2(code : Expr, ?id : Int = 0) : Expr {
+    var idStr = pushSlice(code);
+    
+    var identifiers = Staged.collectIdentifiers(code);
+    trace("Identifiers " + identifiers);
+    /*
+    var mappings = 
+      identifiers.map(function (str) return str.substr(1)).map(function (str) {
+        return "{ field : '" + str + "', expr : Staged.stagedSimple("+str+") }";
+      }).join(",");
+    var res =
+      Context.parse(Std.format("{
+        var res = cpy(Staged.getSlice());
+        Staged.subtituedWithExpForField(res, [$mappings] );        
+        res;
+      }"),
+      Context.currentPos()
+    );
+    trace("Result " + Tools res);
+    */
+// var indExpr = Context.makeExpr(ind, Context.currentPos());
+    var cp = mk(ECall(mk(EField(mk(EConst(CType("Context"))), "currentPos")), []));
+    
+    var allMaps = identifiers.map(function (str) return str.substr(1)).map(function (str) {
+        if (StringTools.startsWith(str, "_")) {
+          str = str.substr(1);
+          return mk(EObjectDecl([
+            { field : "field", expr : mk(EConst(CString("_"+str))) },
+            { field : "expr", expr : mk(EConst(CIdent(str))) }
+          ]));
+
+        } else {
+          return mk(EObjectDecl([
+            { field : "field", expr : mk(EConst(CString(str))) },
+            { field : "expr", expr : mk(ECall(mk(EField(mk(EConst(CType("Context"))), "makeExpr")), [mk(EConst(CIdent(str))), cp])) }
+  //          { field : "expr", expr : mk(EConst(CIdent(str))) }
+          ]));          
+        }
+      });
+    
+    var expMapp : ExprDef = 
+      EVars([
+        { name : "mappings", type : null, expr : mk(
+          EArrayDecl(allMaps.array())
+        )}
+      ]);
+
+    var exp1 : ExprDef = 
+      EVars([
+        { name : "res", type : null, expr : mk(ECall(mk(EConst(CIdent("cpy"))), [mk(ECall(mk(EField(mk(EConst(CType("Staged"))), "getSlice")), [mk(EConst(CString(idStr)))]))])
+        ) }
+      ]);
+    
+    var res =
+      mk(EBlock([
+        mk(expMapp),
+        mk(exp1),
+        mk(ECall(mk(EField(mk(EConst(CType("Staged"))), "subtituedWithExpForField")), [mk(EConst(CIdent("res"))), mk(EConst(CIdent("mappings")))])),
+        mk(EConst(CIdent("res")))
+      ]));
+    return res;
   }
 
 }
