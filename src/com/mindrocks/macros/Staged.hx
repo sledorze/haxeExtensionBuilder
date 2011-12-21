@@ -321,8 +321,23 @@ class Staged {
     return { expr : expDef, pos : Context.currentPos() };
   }
   
+  static function mkCall(clazz : String, meth : String)
+    return mk(EField(mk(EConst(CType(clazz))), meth))
+  
   static var currentPos =
-    mk(ECall(mk(EField(mk(EConst(CType("Context"))), "currentPos")), []));
+    mk(ECall(mkCall("Context", "currentPos"), []));
+    
+  static var stagedCpy =
+    mkCall("Staged", "cpy");
+    
+  static var contextMakeExpr =
+    mkCall("Context", "makeExpr");
+    
+  static var stagedGetSlice =
+    mkCall("Staged", "getSlice");
+    
+  static var substitueExpr =
+    mk(ECall(mkCall("Staged", "subtituedWithExpForField"), [mk(EConst(CIdent("res"))), mk(EConst(CIdent("mappings")))]));
     
   @:macro public static function exp(code : Expr, ?id : Int = 0) : Expr {
     var idStr = setSlice(code);
@@ -335,7 +350,7 @@ class Staged {
         if (StringTools.startsWith(str, "_")) {
           mk(EConst(CIdent(str.substr(1))));
         } else {
-          mk(ECall(mk(EField(mk(EConst(CType("Context"))), "makeExpr")), [mk(EConst(CIdent(str))), currentPos]));
+          mk(ECall(contextMakeExpr, [mk(EConst(CIdent(str))), currentPos]));
         }
       
       return mk(EObjectDecl([
@@ -354,7 +369,7 @@ class Staged {
 
     var copyExp : ExprDef = 
       EVars([
-        { name : "res", type : null, expr : mk(ECall(mk(EField(mk(EConst(CType("Staged"))), "cpy")), [mk(ECall(mk(EField(mk(EConst(CType("Staged"))), "getSlice")), [mk(EConst(CString(idStr)))]))])
+        { name : "res", type : null, expr : mk(ECall(stagedCpy, [mk(ECall(stagedGetSlice, [mk(EConst(CString(idStr)))]))])
         ) }
       ]);
     
@@ -362,7 +377,7 @@ class Staged {
       mk(EBlock([
         mk(mappingExp),
         mk(copyExp),
-        mk(ECall(mk(EField(mk(EConst(CType("Staged"))), "subtituedWithExpForField")), [mk(EConst(CIdent("res"))), mk(EConst(CIdent("mappings")))])),
+        substitueExpr,
         mk(EConst(CIdent("res")))
       ]));
   }
