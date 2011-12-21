@@ -56,57 +56,22 @@ class StagedTestMacros {
     var curPos = Context.currentPos();
     var c = 12;
     var arr = [];
+    
     [0, 1, 2, 3].map(function (ind) {
 
       c -= 1;
       var xxx = "yop" + ind + c;
-//      var indExpr = Context.makeExpr(ind, Context.currentPos());
       var indExpr = Staged.staged2( { $ind; } );
       
-      var localExpr =
+      arr.push(
         Staged.staged2({
           trace('wow ' + $c + " " + $xxx + " " + $_indExpr);
-        });
-        
-//      var results = Staged.collectIdentifiers(newOne);
-//      trace("Identifiers " + results);
-
-// Generer le code ci dessous a partir des identifiants recupérés..      
-/*
-      Staged.subtituedWithExpForField(newOne,
-        [{ field : "ind", expr : { expr : EConst(CString("" + ind)), pos : curPos } }]
+        })
       );
-*/        
-      arr.push(localExpr);
-      /*
-      var iInd = "$ind".staged();
-        
-      arr.push(
-        "{
-          trace('i ' + $iInd);
-          $localExpr;
-          $init;
-          
-          function oneTime() {
-            if ($cond) {
-              $body;
-              $inc;
-              oneTime();
-            }
-          }
-          oneTime();
-        }".staged()
-      );
-      */
+      
     });
     
-    var res = { expr : EBlock(arr), pos : Context.currentPos() };
-    
-    for (a in  arr) {
-      trace("Length " + a);
-    }
-    
-    return res;
+    return { expr : EBlock(arr), pos : Context.currentPos() };
   }
 
   

@@ -234,7 +234,7 @@ class Staged {
     for (sub in subs) {
       if (sub.field == name) {
         try {
-          trace("before " + Std.string(sub.expr));
+//          trace("before " + Std.string(sub.expr));
           var handled =
             switch (sub.expr.typeof()) {
               case TObject:
@@ -249,17 +249,18 @@ class Staged {
                 true;
               default: false;
             };
-            
+  /*          
           trace("sub.expr " + Std.string(sub.expr));
           trace("sub.expr.typeof() " + Std.string(sub.expr.typeof()));
           
           trace("name " + name + ": " + handled);
+          */
           if (!handled) {
             src.expr = Context.makeExpr(sub.expr, src.pos).expr;
           }
           
         } catch (e : Dynamic) {
-          trace("Error while substitution" + name);
+          trace("Error during substitution" + name);
         }
         break;
       }
@@ -267,7 +268,6 @@ class Staged {
   }
 
   public static function subtituedWithExpForField(exp : Expr, arr : Array<{field : String, expr : Expr }>) {
-    trace("Subs " + arr);
     new Substituer(fieldToExpr(arr)).substitueExp(exp);
   }
 
@@ -337,7 +337,7 @@ class Staged {
   }
   private static var slice : Hash<Expr> = new Hash<Expr>();
 
-  public static function pushSlice(e : Expr) : String {
+  public static function setSlice(e : Expr) : String {
     var id = getId();
     slice.set(id, e);
     return id;
@@ -345,49 +345,16 @@ class Staged {
   public static function getSlice(id : String) : Expr {
     return slice.get(id);
   }
-  /*
-  static var slice2 : Expr = null;
-  public static function getSlice2() : Expr {
-    return slice2;
-  }
-  */
+
   public static function mk(expDef : ExprDef) {
     return { expr : expDef, pos : Context.currentPos() };
   }
   
-  /*
-  @:macro public static function stagedSimple(code : Expr, ?id : Int = 0) : Expr {
-    slice2 = code;
-    return
-      Context.parse(Std.format("{
-        cpy(Staged.getSlice2());
-      }"),
-      Context.currentPos()
-    );
-  }
-  */
-  
   @:macro public static function staged2(code : Expr, ?id : Int = 0) : Expr {
-    var idStr = pushSlice(code);
+    var idStr = setSlice(code);
     
     var identifiers = Staged.collectIdentifiers(code);
-    trace("Identifiers " + identifiers);
-    /*
-    var mappings = 
-      identifiers.map(function (str) return str.substr(1)).map(function (str) {
-        return "{ field : '" + str + "', expr : Staged.stagedSimple("+str+") }";
-      }).join(",");
-    var res =
-      Context.parse(Std.format("{
-        var res = cpy(Staged.getSlice());
-        Staged.subtituedWithExpForField(res, [$mappings] );        
-        res;
-      }"),
-      Context.currentPos()
-    );
-    trace("Result " + Tools res);
-    */
-// var indExpr = Context.makeExpr(ind, Context.currentPos());
+
     var cp = mk(ECall(mk(EField(mk(EConst(CType("Context"))), "currentPos")), []));
     
     var allMaps = identifiers.map(function (str) return str.substr(1)).map(function (str) {
@@ -402,7 +369,6 @@ class Staged {
           return mk(EObjectDecl([
             { field : "field", expr : mk(EConst(CString(str))) },
             { field : "expr", expr : mk(ECall(mk(EField(mk(EConst(CType("Context"))), "makeExpr")), [mk(EConst(CIdent(str))), cp])) }
-  //          { field : "expr", expr : mk(EConst(CIdent(str))) }
           ]));          
         }
       });
