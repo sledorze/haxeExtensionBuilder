@@ -31,32 +31,31 @@ class LazyMacro {
     } else {
 */    
     return
-      "{
+      Staged.exp( {
         var value = null;
-        return function () {        
+        function () {        
           if (value == null) {
             value = untyped 1; // not null to prevent live lock if it forms a cycle.
-            value = $exp;
+            value = $_exp;
           }
           return value;
-        };
-      }
-      ".staged();
+        };        
+      });
 //    }
   }
 
   @:macro public static function lazyF(exp : Expr) : Expr return {
-    "{
-      var value = null;
-      function () {
-        if (value == null) {
-          value = untyped 1; // not null to prevent live lock if it forms a cycle.
-          value = $exp();
-        }
-        return value;
-      };
-    }
-    ".staged();
+    return
+      Staged.exp({
+        var value = null;
+        function () {
+          if (value == null) {
+            value = untyped 1; // not null to prevent live lock if it forms a cycle.
+            value = $_exp();
+          }
+          return value;
+        };
+      });
   }
 
 }

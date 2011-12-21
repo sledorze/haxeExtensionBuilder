@@ -40,11 +40,10 @@ class D {
                 }                  
               
               if (name != null) {              
-                
-                var rest = mk(EBlock(nexts));
-                var func = EFunction(null, { args : [ { name : name, type : null, opt : false, value : null } ], ret : null, expr : "{ return $rest; }".staged(), params : []} );
 
-                return ["{ ($r).flatMap($func); }".staged()];
+                var rest = mk(EBlock([mk(EReturn(mk(EBlock(nexts))))]));
+                var func = EFunction(null, { args : [ { name : name, type : null, opt : false, value : null } ], ret : null, expr : rest, params : [] } );
+                return [mk(ECall(mk(EField(r, "flatMap")), [mk(func)]))];
               }
               
             default :

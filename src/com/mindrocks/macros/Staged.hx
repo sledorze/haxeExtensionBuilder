@@ -7,7 +7,7 @@ package com.mindrocks.macros;
 import haxe.macro.Context;
 import haxe.macro.Expr;
 import haxe.macro.Tools;
-import haxe.macro.Type;
+// import haxe.macro.Type;
 
 #if macro
 using Type;
@@ -199,36 +199,7 @@ class Substituer {
 }
 
 class Staged {
-
   
-  private static var mapping : Array<Dynamic> = [];
-  private static var stagedRes : Array<{ id : Int, expr : Expr }> = [];
-  private static var lastReturned : Expr = null;
-
-	public static function __init__() {
-		if (mapping == null) mapping = [];
-		if (stagedRes == null) stagedRes = [];
-	}
-  public static function setMappings(m : Dynamic) {
-    mapping.push(m);
-  }
-  public static function getMappings() : Dynamic {
-    return mapping.pop();
-  }
-
-  public static function set(id : Int, m : Expr) {
-    stagedRes.push({ id : id , expr : m });
-  }  
-  public static function get(id : Int) : Expr {
-    var last = stagedRes[stagedRes.length - 1]; // it's more complicated than a basic stack because of code explosion and access..
-    if (last != null && id == last.id) {
-      lastReturned = stagedRes.pop().expr;
-    }
-    return lastReturned;
-  }
-  
-  static var initialCode : String = "";
-
   static function fieldToExpr(subs : Array<{field : String, expr : Expr }>) return function (src : Expr, identName : String) {
     var name = identName.substr(1);
     for (sub in subs) {
@@ -279,55 +250,55 @@ class Staged {
     subs.substitueExp(exp);
     return res;
   }
-  
-  public static var executeNext = true;
-  @:macro public static function make(exp : Expr, id : Int) : Expr {
-    var arr = [];  
-    var mappings = getMappings();
-    for (field in Reflect.fields(mappings)) {
-      arr.push( { field : field, expr : untyped Reflect.field(mappings, field) } );
-    }
-    
-    subtituedWithExpForField(exp, arr);
-    set(id, exp);
-    
-    executeNext = false;    
-    // code explosion but it's at generation time, so maybe worst the burden..
-    return
-      Context.parse('{
-          if (Staged.executeNext==true) {
-            Staged.staged("'+initialCode+'",' + (id+1) + ');
-          } else {
-            Staged.executeNext = true;
-          };
-        }',
-        Context.currentPos()
-      );
+
+  static var pexp : Expr;
+  public static function pput(e : Expr) {
+    pexp = e;
+  }
+  @:macro public static function pget(e : Expr) {
+    return pexp;
   }
   
-  @:macro public static function staged(code : String, ?id : Int = 0) : Expr {
-    initialCode = code;
+  @:macro public static function flatten(e : Expr) {
+    return exp({
+      Staged.pput($_e);
+      Staged.pget({});
+    });
+  }
 
-    var identifiers = {
-      var r : EReg = ~/\$[a-zA-Z0-9_-]+/;
-      
-      var res = [];
-      var s = code;
-      while( true ) {
-        if( !r.match(s) )
-          break;
-        var ident = r.matched(0).substr(1); // matchedLeft().substr(1);
-        if (!res.has(ident))
-          res.push(ident);
-        s = r.matchedRight();      
-      }
-      res;
+  public static function cpy<T>(x : T) : T {
+   return
+    switch (Type.typeof(x)) {
+      case TNull: x;
+	    case TInt: x;
+	    case TFloat: x;
+	    case TBool : x;
+    case TObject :
+        var obj : T = untyped { };
+        untyped  obj.index = x.index;
+        for (f in Reflect.fields(x)) {         
+          Reflect.setField(obj, f, cpy(Reflect.field(x, f)));
+        }
+        obj;        
+      case TFunction: x;
+      case TClass( c ):
+        if (Std.is(x, Array)) {
+          var arr : Array<Dynamic> = untyped x;
+          var res : Array<Dynamic> = arr.map(cpy).array();
+          untyped res;
+        } else {
+          var obj : T = Type.createEmptyInstance(c);
+          for (f in Reflect.fields(x)) {
+            Reflect.setField(obj, f, cpy(Reflect.field(x, f)));
+          }
+          obj;          
+        }
+    	case TEnum( e  ):
+        Type.createEnumIndex(e, Type.enumIndex(x), Type.enumParameters(x).map(cpy).array());
+      case TUnknown:
+        x;
+
     }
-    
-    var mappings =  "{ " + identifiers.map(function (str) return str + " : " + str).join(", ") + " }";
-    
-    var stagedCall = "{ Staged.setMappings(" + mappings + "); Staged.make( " + code + ", " + id + "); Staged.get("+id+"); }";
-    return Context.parse(stagedCall, Context.currentPos());
   }
 
   static var id = 0;
@@ -350,50 +321,50 @@ class Staged {
     return { expr : expDef, pos : Context.currentPos() };
   }
   
-  @:macro public static function staged2(code : Expr, ?id : Int = 0) : Expr {
+  static var currentPos =
+    mk(ECall(mk(EField(mk(EConst(CType("Context"))), "currentPos")), []));
+    
+  @:macro public static function exp(code : Expr, ?id : Int = 0) : Expr {
     var idStr = setSlice(code);
     
-    var identifiers = Staged.collectIdentifiers(code);
-
-    var cp = mk(ECall(mk(EField(mk(EConst(CType("Context"))), "currentPos")), []));
-    
-    var allMaps = identifiers.map(function (str) return str.substr(1)).map(function (str) {
+    var identifiers =
+      Staged.collectIdentifiers(code);
+      
+    function fieldForName(str) {
+      var exp = 
         if (StringTools.startsWith(str, "_")) {
-          str = str.substr(1);
-          return mk(EObjectDecl([
-            { field : "field", expr : mk(EConst(CString("_"+str))) },
-            { field : "expr", expr : mk(EConst(CIdent(str))) }
-          ]));
-
+          mk(EConst(CIdent(str.substr(1))));
         } else {
-          return mk(EObjectDecl([
-            { field : "field", expr : mk(EConst(CString(str))) },
-            { field : "expr", expr : mk(ECall(mk(EField(mk(EConst(CType("Context"))), "makeExpr")), [mk(EConst(CIdent(str))), cp])) }
-          ]));          
+          mk(ECall(mk(EField(mk(EConst(CType("Context"))), "makeExpr")), [mk(EConst(CIdent(str))), currentPos]));
         }
-      });
+      
+      return mk(EObjectDecl([
+        { field : "field", expr : mk(EConst(CString(str))) },
+        { field : "expr", expr : exp }
+      ]));
+    }
     
-    var expMapp : ExprDef = 
+    var mappingFields =
+      identifiers.map(function (str) return str.substr(1)).map(fieldForName).array();
+    
+    var mappingExp : ExprDef = 
       EVars([
-        { name : "mappings", type : null, expr : mk(
-          EArrayDecl(allMaps.array())
-        )}
+        { name : "mappings", type : null, expr : mk(EArrayDecl(mappingFields))}
       ]);
 
-    var exp1 : ExprDef = 
+    var copyExp : ExprDef = 
       EVars([
-        { name : "res", type : null, expr : mk(ECall(mk(EConst(CIdent("cpy"))), [mk(ECall(mk(EField(mk(EConst(CType("Staged"))), "getSlice")), [mk(EConst(CString(idStr)))]))])
+        { name : "res", type : null, expr : mk(ECall(mk(EField(mk(EConst(CType("Staged"))), "cpy")), [mk(ECall(mk(EField(mk(EConst(CType("Staged"))), "getSlice")), [mk(EConst(CString(idStr)))]))])
         ) }
       ]);
     
-    var res =
+    return
       mk(EBlock([
-        mk(expMapp),
-        mk(exp1),
+        mk(mappingExp),
+        mk(copyExp),
         mk(ECall(mk(EField(mk(EConst(CType("Staged"))), "subtituedWithExpForField")), [mk(EConst(CIdent("res"))), mk(EConst(CIdent("mappings")))])),
         mk(EConst(CIdent("res")))
       ]));
-    return res;
   }
 
 }
