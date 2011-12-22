@@ -8,6 +8,7 @@ package ;
  */
 
 import com.mindrocks.macros.Lense;
+import haxe.macro.Expr;
 using com.mindrocks.macros.Lense;
 
 import com.mindrocks.macros.CacheMacro;
@@ -35,7 +36,7 @@ class Anon_ implements LensesFor<{
   toto : String -> String
 }> {}
 
-
+class Expr_ implements LensesFor<Expr> { }
 
 class LensesTest {
 	
