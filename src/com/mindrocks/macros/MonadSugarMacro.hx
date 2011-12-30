@@ -26,8 +26,9 @@ enum MonadOp {
 class Monad {
 
   public static function Do(monadTypeName : String, body : Expr, context : Dynamic, optimize : MonadOp -> Position -> MonadOp) {
-    var monadProxyName = monadTypeName + "__mnd";
-    var monadRef = EConst(CIdent(monadProxyName));
+    //var monadProxyName = monadTypeName + "__mnd";
+    //var monadRef = EConst(CIdent(monadProxyName));
+    var monadRef = EConst(CType(monadTypeName));
     var position : Position = context.currentPos();
     function mk(e : ExprDef) return { pos : position, expr : e };
 
@@ -124,7 +125,7 @@ class Monad {
           case Some(monad):
             return 
               mk(EBlock([
-                mk(EVars([{name: monadProxyName, expr : mk(EConst(CType(monadTypeName))), type : null }])), // add a var proxy
+                // mk(EVars([{name: monadProxyName, expr : mk(EConst(CType(monadTypeName))), type : null }])), // add a var proxy
                 toExpr(optimize(monad, position))
               ]));
             
