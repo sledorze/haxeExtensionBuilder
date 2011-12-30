@@ -1,17 +1,9 @@
 package com.mindrocks.macros;
+
 import haxe.macro.Context;
 import haxe.macro.Expr;
-import haxe.macro.Tools;
 
 using Lambda;
-
-using com.mindrocks.macros.Staged;
-import com.mindrocks.macros.Staged;
-
-using PreludeExtensions;
-// using haxe.data.collections.ArrayExtensions;
-
-// Introduire des rewrite rules
 
 import com.mindrocks.functional.Functional;
 
@@ -19,80 +11,10 @@ import com.mindrocks.functional.Functional;
  * ...
  * @author sledorze
  */
-class OptionM {
-  
-  static function optimize(m : MonadOp, position : Position) : MonadOp {
-    function mk(e : ExprDef) return { pos : position, expr : e };
-    switch(m) {
-      case MFlatMap(e, bindName, body):
-        var body = optimize(body, position);
-        var e = optimize(e, position);
-        
-        switch (e) {
-          case MCall(name, params):
-            switch (name) {
-              case "ret": return optimize(MFuncApp(bindName, body, MExp(params[0])), position);
-              default :
-            }            
-          default:
-            switch (body) {
-              case MCall(name, params):
-                switch (name) {
-                  case "ret": return optimize(MMap(e, bindName, MExp(params[0])), position);
-                  default :
-                }
-              default:
-            }
-        }
-        
-        return MFlatMap(e, bindName, body);
-        
-      default:
-        return m;
-    }
-  }
-  
-  @:macro public static function Do(body : Expr) return
-    Monad.Do("OptionM", body, Context, optimize)
 
-  inline public static function ret<T>(x : T) return
-    Some(x)
-  
-  inline public static function map < T, U > (x : Option<T>, f : T -> U) : Option<U> {
-    switch (x) {
-      case Some(x) : return Some(f(x));
-      default : return None;
-    }
-  }
-
-  inline public static function flatMap<T, U>(x : Option<T>, f : T -> Option<U>) : Option<U> {
-    switch (x) {
-      case Some(x) :
-        var xx = f(x);
-        return xx;
-      default : return None;
-    }
-  }
-}
-
-class ArrayM {
-  @:macro public static function Do(body : Expr) return
-    Monad.Do("ArrayM", body, Context, function (x, _) return x)
-
-  inline public static function ret<T>(x : T) return
-    [x]
-  
-  inline public static function flatMap<T, U>(xs : Array<T>, f : T -> Array<U>) : Array<U> {
-    var res = [];
-    for (x in xs) {
-      for (y in f(x)) {
-        res.push(y);  
-      }      
-    }
-    return res;
-  }  
-}
-
+ /**
+  * AST used for transformations (includes optimizations).
+  */
 enum MonadOp {
   MExp(e : Expr);
   MFuncApp(paramName : String, body : MonadOp, app : MonadOp);
@@ -107,7 +29,7 @@ class Monad {
     var position : Position = context.currentPos();
     function mk(e : ExprDef) return { pos : position, expr : e };
 
-    function promoteExpression(e : Expr) : MonadOp {
+    function tryPromoteExpression(e : Expr) : MonadOp {
       switch (e.expr) {        
         case ECall(exp, params) :
           switch (exp.expr) {
@@ -128,73 +50,80 @@ class Monad {
       return MExp(e);
     }
     
-    function transform(e : Expr, nexts : Option<MonadOp>) : Option<MonadOp> {
+    function transform(e : Expr, nextOpt : Option<MonadOp>) : Option<MonadOp> {
+      
+      function flatMapThis(e : MonadOp, name : String) {
+        switch (nextOpt) {
+          case Some(next):
+            return MFlatMap(e, name, next);
+          case None :
+            return e;
+        }
+      }
+      
       switch (e.expr) {
         case EBinop(op, l, rightExpr) :
           switch (op) {
             case OpLte:              
-              var name : String =
-                switch (l.expr) {
-                  case EConst(c) :
-                    switch (c) {
-                      case CIdent(name) : name;
-                      default : null;
-                    }
-                  default : null;
-                }                  
-              
-              if (name != null) {
-                var e = promoteExpression(rightExpr);
-                switch (nexts) {                  
-                  case Some(next):
-                    return Some(MFlatMap(e, name, next));
-                  case None :
-                    return Some(e);
-                }
-              }
-              
+              switch (l.expr) {
+                case EConst(c) :
+                  switch (c) {
+                    case CIdent(name) :
+                      var e = tryPromoteExpression(rightExpr);
+                      return Some(flatMapThis(e, name));
+                    default :
+                  }
+                default :
+              }                  
             default :
-          }
-        
+          }        
         default:
+      }      
+      var res = {
+        var e = tryPromoteExpression(e);        
+        switch (e) {
+          case MExp(_): e;
+          default: flatMapThis(e, "_");
+        };
       }
-      return Some(promoteExpression(e));
+      return Some(res);
     }
     
-    function materialise(m : MonadOp) : Expr {
+    function toExpr(m : MonadOp) : Expr {
       switch (m) {
         case MExp(e) : return e;
         
         case MFlatMap(e, bindName, body) :
-          var rest = mk(EReturn(materialise(body)));
+          var rest = mk(EReturn(toExpr(body)));
           var func = mk(EFunction(null, { args : [ { name : bindName, type : null, opt : false, value : null } ], ret : null, expr : rest, params : [] } ));
-          var res = mk(ECall(mk(EField(mk(EConst(CType(monadTypeName))), "flatMap")), [materialise(e), func]));
+          var res = mk(ECall(mk(EField(mk(EConst(CType(monadTypeName))), "flatMap")), [toExpr(e), func]));
           return res;
           
         case MMap(e, bindName, body) :
-          var rest = mk(EReturn(materialise(body)));
+          var rest = mk(EReturn(toExpr(body)));
           var func = mk(EFunction(null, { args : [ { name : bindName, type : null, opt : false, value : null } ], ret : null, expr : rest, params : [] } ));
-          var res = mk(ECall(mk(EField(mk(EConst(CType(monadTypeName))), "map")), [materialise(e), func]));
+          var res = mk(ECall(mk(EField(mk(EConst(CType(monadTypeName))), "map")), [toExpr(e), func]));
           return res;
           
         case MCall(name, params) :
           return mk(ECall(mk(EField(mk(EConst(CType(monadTypeName))), name)), params));
 
         case MFuncApp(paramName, body, app):
-          var bdy = mk(EReturn(materialise(body)));
-          var func = mk(EFunction(null, { args : [ { name : paramName, type : null, opt : false, value : null } ], ret : null, expr : bdy, params : [] } ));
-          return mk(ECall(func, [materialise(app)]));
+          var body = mk(EReturn(toExpr(body)));
+          var func = mk(EFunction(null, { args : [ { name : paramName, type : null, opt : false, value : null } ], ret : null, expr : body, params : [] } ));
+          return mk(ECall(func, [toExpr(app)]));
       }
     }
     
     switch (body.expr) {
       case EBlock(exprs):
-        switch(exprs.foldr(None, transform)) {
-          case Some(monad): return materialise(optimize(monad, position));
-          case None: return mk(EBlock([]));
+        exprs.reverse();
+        switch(exprs.fold(transform, None)) {
+          case Some(monad): return toExpr(optimize(monad, position));
+          default:
         }
-        
-      default : return body;
+      default :
     };
+    return body;
   }  
 }

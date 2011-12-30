@@ -5,15 +5,9 @@ package ;
  * @author sledorze
  */
 
-// import Prelude;
-using PreludeExtensions;
+import com.mindrocks.functional.monads.Standard;
+using com.mindrocks.functional.monads.Standard;
 
-import com.mindrocks.functional.Functional;
-using com.mindrocks.functional.Functional;
-
-import com.mindrocks.macros.MonadSugarMacro;
-using com.mindrocks.macros.MonadSugarMacro;
- 
 class MonadTest {
 
   public static function foo() {
@@ -25,11 +19,8 @@ class MonadTest {
     var res =
       OptionM.Do({
         value <= ret(55);
-        value <= ret(value * 2);        
-        x <= OptionM.Do({
-          v <= ret(123);
-          ret(v + value);
-        });
+        value1 <= ret(value * 2);        
+        x <= ret(value1 + value);
         ret(x);
       });
       
@@ -41,7 +32,16 @@ class MonadTest {
         [a + b + c];
       });
       
-    trace("result " + Std.string(res)); // MonadTest.hx:40: result Some(233)
+    var res3 =
+      StateM.Do({
+        passedState <= gets();
+        puts("2");
+        state <= gets();
+        ret('passed state: '+passedState+' new state: '+state);
+      }).runState("1");
+      
+    trace("result " + Std.string(res));
     trace("result2 " + Std.string(res2)); // MonadTest.hx:41: result2 [10,20,30,11,21,31,12,22,32]
+    trace("result3 " + Std.string(res3)); // MonadTest.hx:41: result2 [10,20,30,11,21,31,12,22,32]
   }  
 }
