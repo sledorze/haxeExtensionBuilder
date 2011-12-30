@@ -26,6 +26,8 @@ enum MonadOp {
 class Monad {
 
   public static function Do(monadTypeName : String, body : Expr, context : Dynamic, optimize : MonadOp -> Position -> MonadOp) {
+    var monadProxyName = monadTypeName + "__mnd";
+    var monadRef = EConst(CIdent(monadProxyName));
     var position : Position = context.currentPos();
     function mk(e : ExprDef) return { pos : position, expr : e };
 
@@ -96,17 +98,17 @@ class Monad {
         case MFlatMap(e, bindName, body) :
           var rest = mk(EReturn(toExpr(body)));
           var func = mk(EFunction(null, { args : [ { name : bindName, type : null, opt : false, value : null } ], ret : null, expr : rest, params : [] } ));
-          var res = mk(ECall(mk(EField(mk(EConst(CType(monadTypeName))), "flatMap")), [toExpr(e), func]));
+          var res = mk(ECall(mk(EField(mk(monadRef), "flatMap")), [toExpr(e), func]));
           return res;
           
         case MMap(e, bindName, body) :
           var rest = mk(EReturn(toExpr(body)));
           var func = mk(EFunction(null, { args : [ { name : bindName, type : null, opt : false, value : null } ], ret : null, expr : rest, params : [] } ));
-          var res = mk(ECall(mk(EField(mk(EConst(CType(monadTypeName))), "map")), [toExpr(e), func]));
+          var res = mk(ECall(mk(EField(mk(monadRef), "map")), [toExpr(e), func]));
           return res;
           
         case MCall(name, params) :
-          return mk(ECall(mk(EField(mk(EConst(CType(monadTypeName))), name)), params));
+          return mk(ECall(mk(EField(mk(monadRef), name)), params));
 
         case MFuncApp(paramName, body, app):
           var body = mk(EReturn(toExpr(body)));
@@ -119,7 +121,13 @@ class Monad {
       case EBlock(exprs):
         exprs.reverse();
         switch(exprs.fold(transform, None)) {
-          case Some(monad): return toExpr(optimize(monad, position));
+          case Some(monad):
+            return 
+              mk(EBlock([
+                mk(EVars([{name: monadProxyName, expr : mk(EConst(CType(monadTypeName))), type : null }])), // add a var proxy
+                toExpr(optimize(monad, position))
+              ]));
+            
           default:
         }
       default :
