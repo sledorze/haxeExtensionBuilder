@@ -31,10 +31,10 @@ class LazyMacro {
     } else {
 */    
     return
-      Staged.exp( {
+      Staged.exp({
         var value = null;
-        function () {        
-          if (value == null) {
+        function () {
+          if (value == null) {            
             value = untyped 1; // not null to prevent live lock if it forms a cycle.
             value = $_exp;
           }

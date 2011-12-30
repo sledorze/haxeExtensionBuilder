@@ -205,7 +205,7 @@ class Staged {
     for (sub in subs) {
       if (sub.field == name) {
         try {
-//          trace("before " + Std.string(sub.expr));
+    //      trace("before " + Std.string(sub.expr));
           var handled =
             switch (sub.expr.typeof()) {
               case TObject:
@@ -220,12 +220,12 @@ class Staged {
                 true;
               default: false;
             };
-  /*          
+/*            
           trace("sub.expr " + Std.string(sub.expr));
           trace("sub.expr.typeof() " + Std.string(sub.expr.typeof()));
           
           trace("name " + name + ": " + handled);
-          */
+*/          
           if (!handled) {
             src.expr = Context.makeExpr(sub.expr, src.pos).expr;
           }
@@ -317,9 +317,8 @@ class Staged {
     return slice.get(id);
   }
 
-  public static function mk(expDef : ExprDef) {
-    return { expr : expDef, pos : Context.currentPos() };
-  }
+  public static function mk(expDef : ExprDef)
+    return { expr : expDef, pos : Context.currentPos() }
   
   static function mkCall(clazz : String, meth : String)
     return mk(EField(mk(EConst(CType(clazz))), meth))
@@ -345,6 +344,8 @@ class Staged {
     var identifiers =
       Staged.collectIdentifiers(code);
       
+//    trace("Identifiers " + identifiers);
+      
     function fieldForName(str) {
       var exp = 
         if (StringTools.startsWith(str, "_")) {
@@ -369,8 +370,7 @@ class Staged {
 
     var copyExp : ExprDef = 
       EVars([
-        { name : "res", type : null, expr : mk(ECall(stagedCpy, [mk(ECall(stagedGetSlice, [mk(EConst(CString(idStr)))]))])
-        ) }
+        { name : "res", type : null, expr : mk(ECall(stagedCpy, [mk(ECall(stagedGetSlice, [mk(EConst(CString(idStr)))]))])) }
       ]);
     
     return

@@ -59,8 +59,6 @@ class LensesTest {
     
     users.map(callback(User_.name_.set, "georges"));
     
-    
-
     trace("initial " + Std.string(userGroup));
     
     var ageOfUserGroupLead = UserGroup_.lead_.andThen(User_.age_);

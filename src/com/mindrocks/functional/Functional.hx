@@ -23,7 +23,9 @@ class OptionIsAMonad {
   
   public static function flatMap < T, U > (x : Option<T>, f : T -> Option<U>) : Option<U> {
     switch (x) {
-      case Some(v) : return f(v);
+      case Some(v) :
+        var r = f(v);
+        return r;
       case None : return None;
     }
   }
