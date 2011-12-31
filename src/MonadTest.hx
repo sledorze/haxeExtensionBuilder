@@ -39,9 +39,22 @@ class MonadTest {
         state <= gets();
         ret('passed state: '+passedState+' new state: '+state);
       }).runState("1");
-      
+
+    var dummyReadFile:RC<String,String> = function(cont)  {
+      var fileContents = "dummy-content";
+      return cont(fileContents);
+    }
+
+    var res4 =
+      ContM.Do({
+        headline <= ret(52);
+        filecontents <= dummyReadFile;
+        ret(Std.string(headline) + "\n" + filecontents);
+      })(function(x) return x);
+
     trace("result " + Std.string(res));
     trace("result2 " + Std.string(res2)); // MonadTest.hx:41: result2 [10,20,30,11,21,31,12,22,32]
     trace("result3 " + Std.string(res3)); // MonadTest.hx:41: result2 [10,20,30,11,21,31,12,22,32]
+    trace("result4 " + Std.string(res4)); // MonadTest.hx:41: result2 [10,20,30,11,21,31,12,22,32]
   }  
 }
