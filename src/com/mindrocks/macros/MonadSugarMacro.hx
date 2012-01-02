@@ -24,10 +24,49 @@ enum MonadOp {
 }
 
 class Monad {
+  
+  public static function noOpt(m : MonadOp, position : Position) : MonadOp
+    return m
+  #if macro
+  public static function genOptimize(m : MonadOp, position : Position) : MonadOp {
+    function mk(e : ExprDef) return { pos : position, expr : e };
+    switch(m) {
+      case MFlatMap(e, bindName, body):
+        var body = genOptimize(body, position);
+        var e = genOptimize(e, position);
+        
+        switch (e) {
+          case MCall(name, params):
+            switch (name) {
+              case "ret": return /*optimize(*/MFuncApp(bindName, body, MExp(params[0]))/*, position)*/;
+              default :
+            }            
+          default:
+            switch (body) {
+              case MCall(name, params):
+                switch (name) {
+                  case "ret": return /*optimize(*/MMap(e, bindName, MExp(params[0]))/*, position)*/;
+                  default :
+                }
+              default:
+            }
+        }
+        
+        return MFlatMap(e, bindName, body);
+        
+      default:
+        return m;
+    }
+  }
+  #end
 
-  public static function Do(monadTypeName : String, body : Expr, context : Dynamic, optimize : MonadOp -> Position -> MonadOp) {
+  public static function Do(monadTypeName : String, body : Expr, context : Dynamic, optimize : MonadOp -> Position -> MonadOp = null) {
+    #if macro
     //var monadProxyName = monadTypeName + "__mnd";
     //var monadRef = EConst(CIdent(monadProxyName));
+    if (optimize == null)
+      optimize = genOptimize;
+    
     var monadRef = EConst(CType(monadTypeName));
     var position : Position = context.currentPos();
     function mk(e : ExprDef) return { pos : position, expr : e };
@@ -57,10 +96,8 @@ class Monad {
       
       function flatMapThis(e : MonadOp, name : String) {
         switch (nextOpt) {
-          case Some(next):
-            return MFlatMap(e, name, next);
-          case None :
-            return e;
+          case Some(next): return MFlatMap(e, name, next);
+          case None : return e;
         }
       }
       
@@ -82,14 +119,7 @@ class Monad {
           }        
         default:
       }      
-      var res = {
-        var e = tryPromoteExpression(e);        
-        switch (e) {
-          case MExp(_): e;
-          default: flatMapThis(e, "_");
-        };
-      }
-      return Some(res);
+      return Some(flatMapThis(tryPromoteExpression(e), "_"));
     }
     
     function toExpr(m : MonadOp) : Expr {
@@ -134,5 +164,6 @@ class Monad {
       default :
     };
     return body;
+    #end
   }  
 }
