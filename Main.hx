@@ -17,13 +17,12 @@ class Main {
     LangParser.langTest();
     
     MonadTest.compilationTest();
-    
-    ParserTest.jsonTest();
     */
-    
-    MonadContTest.compilationTest();
+    ParserTest.jsonTest();
     
     /*
+    MonadContTest.compilationTest();
+    
     StructureTest.test();
     
     // MergeTest.compilationTest(); // live lock
