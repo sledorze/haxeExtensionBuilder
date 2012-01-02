@@ -17,6 +17,9 @@ using com.mindrocks.macros.LazyMacro;
 
 using Lambda; 
 
+import com.mindrocks.text.ParserMonad;
+using com.mindrocks.text.ParserMonad;
+
 typedef JsEntry = { name : String, value : JsValue}
 enum JsValue {
   JsObject(fields : Array<JsEntry>);
@@ -81,9 +84,28 @@ class JsonParser {
   static var jsonValueP : Void -> Parser<String,JsValue> =
     [jsonParser, jsonDataP, jsonArrayP].ors().tag("json value").lazyF();
 
-  static var jsonArrayP =
+  static var jsonArrayP2 =
     leftBracketP._and(jsonValueP.repsep(commaP).and_(rightBracketP).commit()).then(JsArray);
     
+  static var jsonArrayPM =
+    ParserM.Do({
+      jsons <= ParserM.Do({
+        leftBracketP;
+        jsons <= jsonValueP.repsep(commaP);
+        rightBracketP;
+        ret(jsons);
+      }).commit();
+      ret(JsArray(jsons));
+    });
+    
+  static var jsonArrayP =
+    ParserM.Do({
+      leftBracketP;
+      jsons <= jsonValueP.repsep(commaP);
+      rightBracketP;
+      ret(JsArray(jsons));
+    }).commit();
+
   static var jsonEntryP =
     identifierP.and(sepP._and(jsonValueP).commit());
   
