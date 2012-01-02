@@ -49,7 +49,7 @@ class MonadContTest {
     var db = new DB();
     
     var res =
-      NodeM.Do({
+      NodeM.dO({
         coll <= db.collection("avatars");
         avatars <= coll.all("");
         ret(avatars.length);

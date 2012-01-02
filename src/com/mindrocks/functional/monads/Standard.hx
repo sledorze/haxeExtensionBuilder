@@ -4,7 +4,7 @@ import haxe.macro.Expr;
 import haxe.macro.Context;
 
 import com.mindrocks.functional.Functional;
-import com.mindrocks.macros.MonadSugarMacro;
+import com.mindrocks.macros.Monad;
 
 /**
  * ...
@@ -13,8 +13,8 @@ import com.mindrocks.macros.MonadSugarMacro;
  
 @:native("Option_Monad") class OptionM {
     
-  @:macro public static function Do(body : Expr) return
-    Monad.Do("OptionM", body, Context)
+  @:macro public static function dO(body : Expr) return
+    Monad.dO("OptionM", body, Context)
 
   inline public static function ret<T>(x : T) return
     Some(x)
@@ -37,8 +37,8 @@ import com.mindrocks.macros.MonadSugarMacro;
 }
 
 @:native("Array_Monad") class ArrayM {
-  @:macro public static function Do(body : Expr) return
-  Monad.Do("ArrayM", body, Context)
+  @:macro public static function dO(body : Expr) return
+  Monad.dO("ArrayM", body, Context)
 
   inline public static function ret<T>(x : T) return
     [x]
@@ -66,8 +66,8 @@ typedef State<S,T> = S -> {state:S, value:T};
 
 @:native("ST_Monad") class StateM {
 
-  @:macro public static function Do(body : Expr) return
-    Monad.Do("StateM", body, Context, Monad.noOpt)
+  @:macro public static function dO(body : Expr) return
+    Monad.dO("StateM", body, Context, Monad.noOpt)
 
   static public function ret <S,T>(i:T):State<S,T> {
     return function(s:S){ return {state:s, value:i}; };
@@ -110,8 +110,8 @@ typedef RC<R,A> = (A -> R) -> R
 
 @:native("Cont_Monad") class ContM {
 
-  @:macro public static function Do(body : Expr) return
-    Monad.Do("ContM", body, Context)
+  @:macro public static function dO(body : Expr) return
+    Monad.dO("ContM", body, Context)
 
   static public function ret <A,R>(i:A):RC<R,A>
     return function(cont) return cont(i)

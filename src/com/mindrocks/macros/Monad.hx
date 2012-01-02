@@ -3,26 +3,33 @@ package com.mindrocks.macros;
 import haxe.macro.Context;
 import haxe.macro.Expr;
 
-using Lambda;
-
-import com.mindrocks.functional.Functional;
-
 /**
  * ...
  * @author sledorze
  */
 
+ enum Option<T> {
+   None;
+   Some(v : T);
+ }
+ 
  /**
   * AST used for transformations (includes optimizations).
   */
 enum MonadOp {
+#if macro
   MExp(e : Expr);
-  MFuncApp(paramName : String, body : MonadOp, app : MonadOp);
-  MFlatMap(e : MonadOp, bindName : String, body : MonadOp);
   MMap(e : MonadOp, bindName : String, body : MonadOp);
+  MFlatMap(e : MonadOp, bindName : String, body : MonadOp);
+  
   MCall(name : String, params : Array<Expr>);
+  MFuncApp(paramName : String, body : MonadOp, app : MonadOp);
+#end
 }
 
+/**
+ * Use ret, map and flatMap by convention (map being required when standards optimizations are used).
+ */
 class Monad {
   
   public static function noOpt(m : MonadOp, position : Position) : MonadOp
@@ -60,7 +67,7 @@ class Monad {
   }
   #end
 
-  public static function Do(monadTypeName : String, body : Expr, context : Dynamic, optimize : MonadOp -> Position -> MonadOp = null) {
+  public static function dO(monadTypeName : String, body : Expr, context : Dynamic, optimize : MonadOp -> Position -> MonadOp = null) {
     #if macro
     //var monadProxyName = monadTypeName + "__mnd";
     //var monadRef = EConst(CIdent(monadProxyName));
@@ -151,7 +158,7 @@ class Monad {
     switch (body.expr) {
       case EBlock(exprs):
         exprs.reverse();
-        switch(exprs.fold(transform, None)) {
+        switch(Lambda.fold(exprs, transform, None)) {
           case Some(monad):
             return 
               mk(EBlock([
@@ -165,5 +172,5 @@ class Monad {
     };
     return body;
     #end
-  }  
+  }
 }

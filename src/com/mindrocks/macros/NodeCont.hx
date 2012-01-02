@@ -7,7 +7,7 @@ package com.mindrocks.macros;
 
 import haxe.macro.Expr;
 import haxe.macro.Context;
-import com.mindrocks.macros.MonadSugarMacro;
+import com.mindrocks.macros.Monad;
 
  
 typedef Error = Dynamic
@@ -15,8 +15,8 @@ typedef RC<R,A> = (Error -> A -> R) -> R
 
 @:native("NodeM") class NodeM {
 
-  @:macro public static function Do(body : Expr) return
-    Monad.Do("NodeM", body, Context)
+  @:macro public static function dO(body : Expr) return
+    Monad.dO("NodeM", body, Context)
 
   inline static public function ret <A,R>(i:A):RC<R,A>
     return function(cont) return cont(null, i)

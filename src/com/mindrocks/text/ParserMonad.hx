@@ -5,14 +5,14 @@ package com.mindrocks.text;
  * @author sledorze
  */
 
-import com.mindrocks.macros.MonadSugarMacro;
+import com.mindrocks.macros.Monad;
 //import com.mindrocks.text.Parser;
 using com.mindrocks.text.Parser;
 
 class ParserM {
 
-  @:macro public static function Do(body : haxe.macro.Expr) return
-    Monad.Do("ParserM", body, haxe.macro.Context)
+  @:macro public static function dO(body : haxe.macro.Expr) return
+    Monad.dO("ParserM", body, haxe.macro.Context)
 
   inline public static function ret < I, T > (v : T) : Void -> Parser <I,T>
     return v.success()

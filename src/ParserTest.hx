@@ -88,8 +88,8 @@ class JsonParser {
     leftBracketP._and(jsonValueP.repsep(commaP).and_(rightBracketP).commit()).then(JsArray);
     
   static var jsonArrayPM =
-    ParserM.Do({
-      jsons <= ParserM.Do({
+    ParserM.dO({
+      jsons <= ParserM.dO({
         leftBracketP;
         jsons <= jsonValueP.repsep(commaP);
         rightBracketP;
@@ -99,7 +99,7 @@ class JsonParser {
     });
     
   static var jsonArrayP =
-    ParserM.Do({
+    ParserM.dO({
       leftBracketP;
       jsons <= jsonValueP.repsep(commaP);
       rightBracketP;
