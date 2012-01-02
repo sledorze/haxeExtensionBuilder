@@ -15,11 +15,15 @@ class Main {
     ExternalFileFormat.processTest();        
     
     LangParser.langTest();
-    */
-    MonadTest.compilationTest();
-    /*
-    ParserTest.jsonTest();
     
+    MonadTest.compilationTest();
+    
+    ParserTest.jsonTest();
+    */
+    
+    MonadContTest.compilationTest();
+    
+    /*
     StructureTest.test();
     
     // MergeTest.compilationTest(); // live lock
