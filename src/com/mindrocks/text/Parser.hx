@@ -1,16 +1,13 @@
 package com.mindrocks.text;
 
 import com.mindrocks.text.InputStream;
+
 import com.mindrocks.functional.Functional;
 using com.mindrocks.functional.Functional;
 
 import com.mindrocks.macros.LazyMacro;
 
 using Lambda;
-import haxe.data.collections.List; // reimplement minimal version.
-
-
-using com.mindrocks.macros.LazyMacro;
 
 /**
  * ...
@@ -139,7 +136,7 @@ class ReaderObj {
     };
   }
   
-  inline public static function startsWith(r : Input<String>, x : String) : Bool {
+  inline public static function startsWith(r : Input<String>, x : String) : Bool {    
     return take(r, x.length) == x;
   }
   
@@ -388,7 +385,6 @@ typedef Head = {
 
   inline public static function and < I, T, U > (p1 : Void -> Parser<I,T>, p2 : Void -> Parser<I,U>) : Void -> Parser < I, Tuple2 < T, U >> return
     andWith(p1, p2, Tuples.t2)
-
     
   inline static function sndParam<A,B>(_, b) return b
     
@@ -464,7 +460,7 @@ typedef Head = {
     ps.fold(function (p, accp) return or(accp, p), fail("none match", false));
   }
 */    
-  // unrolled vesion of the above one
+  // unrolled version of the above one
   public static function ors<I,T>(ps : Array < Void -> Parser<I,T> > ) : Void -> Parser<I,T>
     return LazyMacro.lazy({
       function (input) {
