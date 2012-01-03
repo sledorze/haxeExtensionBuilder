@@ -6,9 +6,6 @@ package com.mindrocks.text;
  */
 import Type;
 
-import haxe.data.collections.IterableExtensions;
-using haxe.data.collections.IterableExtensions;
-
 class Tools {
 	public static function enumerable < C, T > (v:C):Enumerable < C, T > {
 		//TODO ugh.
@@ -105,13 +102,14 @@ class ArrayEnumerable<T> extends Enumerable < Array<T>, T > {
 		return data.slice(loc, loc + len);
 	}
 }
+
 class Indexable<C,T>{
 	public var data : C;
 	public var index : Int;
 	public function new(data,?index = 0) {
 		this.data 	= data;
 		this.index	= index;
-	}
+	}  
 	public function at(i):T {
 		throw "abstract method";
 		return null;
@@ -122,6 +120,7 @@ class Indexable<C,T>{
 		return null;
 	}
 }
+
 class StringIterator {
 	private var ln		: Int;
 	private var data 	: String;
