@@ -17,15 +17,14 @@ class MonadTest {
   public static function compilationTest() {
     
     var res =
-      OptionM.Do({
+      OptionM.dO({
         value <= ret(55);
         value1 <= ret(value * 2);        
-        x <= ret(value1 + value);
-        ret(x);
+        ret(value1 + value);
       });
       
     var res2 = 
-      ArrayM.Do({
+      ArrayM.dO({
         a <= [0, 1, 2];
         b <= [10, 20, 30];
         c <= ret(1000);
@@ -33,7 +32,7 @@ class MonadTest {
       });
       
     var res3 =
-      StateM.Do({
+      StateM.dO({
         passedState <= gets();
         puts("2");
         state <= gets();
@@ -46,15 +45,15 @@ class MonadTest {
     }
 
     var res4 =
-      ContM.Do({
+      ContM.dO({
         headline <= ret(52);
         filecontents <= dummyReadFile;
         ret(Std.string(headline) + "\n" + filecontents);
       })(function(x) return x);
 
     trace("result " + Std.string(res));
-    trace("result2 " + Std.string(res2)); // MonadTest.hx:41: result2 [10,20,30,11,21,31,12,22,32]
-    trace("result3 " + Std.string(res3)); // MonadTest.hx:41: result2 [10,20,30,11,21,31,12,22,32]
-    trace("result4 " + Std.string(res4)); // MonadTest.hx:41: result2 [10,20,30,11,21,31,12,22,32]
+    trace("result2 " + Std.string(res2));
+    trace("result3 " + Std.string(res3));
+    trace("result4 " + Std.string(res4));
   }  
 }
