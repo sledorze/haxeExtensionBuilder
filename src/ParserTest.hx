@@ -184,7 +184,7 @@ class ParserTest {
 
     ok = ok && expectSucces("abc", MonadParserTest.parser(), ['a','b','c']);
 
-    trace("ok : "+ok);
+    trace(ok ? "test passed " : "test FAILED!");
     /*
     var elem = Lib.document.getElementById("haxe:trace");
     if (elem != null) {
