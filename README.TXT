@@ -15,7 +15,3 @@ TODO:
 - think about moving offset to Success enum so that less objects have to be
   created.
 - much more testing!
-- how to write
-  a = "a".and(a) or b
-  b = "b".and(b) or a
-  ?

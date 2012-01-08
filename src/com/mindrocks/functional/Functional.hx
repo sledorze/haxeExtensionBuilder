@@ -84,7 +84,16 @@ class List<T> {
     }
   }
 
-  public static function map<A,B>(l : List<A>, p : A -> B) : List<B>  {
+  public static function each<T>(l : List<T>, p : T -> Void) {
+    if (l.isEmpty())
+      nil();
+    else {
+      p(l.head);
+      var l = l.tail;
+    }
+  }
+
+  public function map<A,B>(l : List<A>, p : A -> B) : List<B>  {
     if (l.isEmpty())
       return new Nil();
     else

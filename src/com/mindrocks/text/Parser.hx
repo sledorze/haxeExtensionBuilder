@@ -110,6 +110,17 @@ class ReaderObj {
       indicator : indicator
     };
   }
+
+  public static function errorMessage(r : Input<String>, msg: FailureStack){
+    var x = r.textAround();
+
+    var r = "";
+    msg.each(function(err){
+        r += "Error at " + err.pos + " : " + err.msg+"\n";
+    });
+
+    return r + " "+x.text+"\n"+x.indicator;
+  } 
   
   inline public static function position<I>(r : Input<I>) : Int return
     r.offset

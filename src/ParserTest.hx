@@ -130,28 +130,19 @@ class LRTest {
   public static var expr : Void -> Parser<String,String> = binop.or(posNumberP).memo().tag("expression");
 }
 
-class ParserTest {
 
-  static function tryParse<T>(str : String, parser : Parser<String,T>, withResult : T -> Void, output : String -> Void) {
-    try {
-      switch (parser(str.reader())) {
-        case Success(res, rest):
-          trace("success!");
-          withResult(res);
-        case Failure(err, rest, _):
-          var p = rest.textAround();
-          output(p.text);
-          output(p.indicator);          
-          err.map(function (err) {
-            output("Error at " + err.pos + " : " + err.msg);
-          });
-          
-          
-      }
-    } catch (e : Dynamic) {
-      trace("Error " + Std.string(e));
-    }    
-  }
+class MonadParserTest {
+
+  public static var parser : Void -> Parser<String,Array<String>> = ParserM.dO({
+      a <= "a".identifier();
+      b <= "b".identifier();
+      c <= "c".identifier();
+      ret([a,b,c]);
+  });
+
+}
+
+class ParserTest {
 
   static function expectFailure<T> (s:String, parser:Parser<String,T>, at){
     switch (parser(s.reader())) {
@@ -163,24 +154,24 @@ class ParserTest {
         if (rest.offset == at)
         return true;
         else {
-          trace("unexpected failure offset: "+rest.offset+" expected: "+at);
+          trace("unexpected failure offset: "+ rest.errorMessage(err));
           return false;
         }
         return true;
     }
   }
 
-  static function expectSucces<A> (s, parser: Parser<String, A>, result:A):Bool{
+  static function expectSucces<A> (s:String, parser: Parser<String, A>, result:A):Bool{
     switch (parser(s.reader())) {
       case Success(res, rest):
-        if (res == result)
+        if (""+res == ""+result)
         return true;
         else {
           trace("result does not match: "+res+" expected :"+result);
           return false;
         }
       case Failure(err, rest, _):
-        trace("unexpected failure : "+rest.offset);
+        trace("unexpected failure : "+rest.errorMessage(err));
         return false;
     }
   }
@@ -190,6 +181,9 @@ class ParserTest {
     var ok = true;
     ok = ok && expectFailure(" {  aaa : aa, bbb :: [cc, dd] } ", JsonParser.jsonParser(), 19);
     ok = ok && expectFailure("5++3+2+3", LRTest.expr(), 2);
+
+    ok = ok && expectSucces("abc", MonadParserTest.parser(), ['a','b','c']);
+
     trace("ok : "+ok);
     /*
     var elem = Lib.document.getElementById("haxe:trace");
