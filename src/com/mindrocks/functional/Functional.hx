@@ -92,10 +92,8 @@ class List<T> {
   }
 
   public static function last<A>(l : List<A>) : A  {
-    trace("a");
     var r:List<A> = null;
     while (true){
-      trace("b");
       if (Std.is(l, Nil))
         if (r == null)
           throw "last called on Nil";

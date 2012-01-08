@@ -152,9 +152,45 @@ class ParserTest {
       trace("Error " + Std.string(e));
     }    
   }
+
+  static function expectFailure<T> (s:String, parser:Parser<String,T>, at){
+    switch (parser(s.reader())) {
+      case Success(res, rest):
+        trace(res);
+        trace("unexpected success, result line above ");
+        return false;
+      case Failure(err, rest, _):
+        if (rest.offset == at)
+        return true;
+        else {
+          trace("unexpected failure offset: "+rest.offset+" expected: "+at);
+          return false;
+        }
+        return true;
+    }
+  }
+
+  static function expectSucces<A> (s, parser: Parser<String, A>, result:A):Bool{
+    switch (parser(s.reader())) {
+      case Success(res, rest):
+        if (res == result)
+        return true;
+        else {
+          trace("result does not match: "+res+" expected :"+result);
+          return false;
+        }
+      case Failure(err, rest, _):
+        trace("unexpected failure : "+rest.offset);
+        return false;
+    }
+  }
   
   public static function jsonTest() {
     
+    var ok = true;
+    ok = ok && expectFailure(" {  aaa : aa, bbb :: [cc, dd] } ", JsonParser.jsonParser(), 19);
+    ok = ok && expectFailure("5++3+2+3", LRTest.expr(), 2);
+    trace("ok : "+ok);
     /*
     var elem = Lib.document.getElementById("haxe:trace");
     if (elem != null) {
@@ -162,25 +198,7 @@ class ParserTest {
       new JQuery(elem).css("font-family", "Courier New, monospace");      // monospace!
     }
     */
-    function toOutput(str : String) {
-      // REPLACE SPACES TO PREVENT THEM TO DDISAPPEAR..
-      
-      trace(StringTools.replace(str, " ", "_"));
-    }
     
-    tryParse(
-      " {  aaa : aa, bbb :: [cc, dd] } ", // , bbb : ccc } ";
-      JsonParser.jsonParser(),
-      function (res) trace("Parsed " + JsonPrettyPrinter.prettify(res)),
-      toOutput
-    );
-    
-    tryParse(
-      "5++3+2+3",
-      LRTest.expr(),
-      function (res) trace("Parsed " + res),
-      toOutput
-    );
     
   }
   
