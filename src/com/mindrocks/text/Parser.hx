@@ -167,7 +167,7 @@ class FailureObj {
 
 
 
-typedef FailureStack = haxe.data.collections.List<FailureMsg>
+typedef FailureStack = com.mindrocks.functional.List<FailureMsg>
 typedef FailureMsg = {
   msg : String,
   pos : Int
@@ -439,7 +439,7 @@ typedef Head = {
         switch(res) {
           case Success(_, _): return res;
           case Failure(err, rest, isError) :
-            return (isError || (err.last.msg == baseFailure))  ? res : Failure(err, rest, true);
+            return (isError || (err.last().msg == baseFailure))  ? res : Failure(err, rest, true);
         }
       }
     })

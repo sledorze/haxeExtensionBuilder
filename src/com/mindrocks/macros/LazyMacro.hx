@@ -4,9 +4,6 @@ import haxe.macro.Context;
 import haxe.macro.Expr;
 import haxe.macro.Type;
 
-import com.mindrocks.macros.Staged;
-using com.mindrocks.macros.Staged;
-
 /**
  * ...
  * @author sledorze
@@ -31,12 +28,12 @@ class LazyMacro {
     } else {
 */    
     return
-      Staged.exp({
+      tink.macro.tools.AST.build({
         var value = null;
         function () {
           if (value == null) {            
             value = untyped 1; // not null to prevent live lock if it forms a cycle.
-            value = $_exp;
+            value = $exp;
           }
           return value;
         };        
@@ -46,12 +43,12 @@ class LazyMacro {
 
   @:macro public static function lazyF(exp : Expr) : Expr return {
     return
-      Staged.exp({
+      tink.macro.tools.AST.build({
         var value = null;
         function () {
           if (value == null) {
             value = untyped 1; // not null to prevent live lock if it forms a cycle.
-            value = $_exp();
+            value = $exp();
           }
           return value;
         };

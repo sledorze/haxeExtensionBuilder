@@ -6,8 +6,8 @@ package ;
  */
 
 import com.mindrocks.text.Parser;
-import js.JQuery;
-import js.Lib;
+// import js.JQuery;
+// import js.Lib;
 using com.mindrocks.text.Parser;
 
 import com.mindrocks.functional.Functional;
@@ -155,11 +155,13 @@ class ParserTest {
   
   public static function jsonTest() {
     
+    /*
     var elem = Lib.document.getElementById("haxe:trace");
     if (elem != null) {
       trace("elem[0] " + elem);
       new JQuery(elem).css("font-family", "Courier New, monospace");      // monospace!
     }
+    */
     function toOutput(str : String) {
       // REPLACE SPACES TO PREVENT THEM TO DDISAPPEAR..
       

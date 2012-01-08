@@ -30,7 +30,9 @@ class Functionnal {
 }
 
 
-
+// TODO: would using an enum be faster?
+// Stax does add comparing functions etc. but this library does not require
+// such.
 class List<T> {
   
   public var head (getHead, null): T;
@@ -81,6 +83,31 @@ class List<T> {
       }
     }
   }
+
+  public static function map<A,B>(l : List<A>, p : A -> B) : List<B>  {
+    if (l.isEmpty())
+      return new Nil();
+    else
+      return new List(p(l.head), map(l.tail, p));
+  }
+
+  public static function last<A>(l : List<A>) : A  {
+    trace("a");
+    var r:List<A> = null;
+    while (true){
+      trace("b");
+      if (Std.is(l, Nil))
+        if (r == null)
+          throw "last called on Nil";
+        else return r.getHead()
+      else {
+        r = l;
+        l = l.tail;
+      }
+    }
+    return null; // dummy line, never used
+  }
+
 }
 
 class Nil<T> extends List<T> {

@@ -1,5 +1,9 @@
-You may find more informations here:
-http://lambdabrella.blogspot.com/2011/10/compile-time-extension-generation-in.html
-http://lambdabrella.blogspot.com/2011/10/compile-time-generation-of-lenses-in.html
-Enjoy!
-                                                      
+Parser combinator library.
+The original implementation was taken from Scala and adopted to HaXe by
+Stephane Le Dorze.
+
+- dependencies:
+  * tinkerbell https://github.com/back2dos/tinkerbell.git
+  optional:
+  * monax if you want to use monad like syntax:
+    https://github.com/sledorze/monax
