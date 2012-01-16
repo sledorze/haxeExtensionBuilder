@@ -66,7 +66,7 @@ class StringEnumerable extends Enumerable<String,String>{
 		super(v, i);
 	}
 	override public function at(i:Int) {
-		return this.data.charAt(this.index);
+		return this.data.charAt(i);
 	}
 	override private function get_length() {
 		return this.data.length;
@@ -118,6 +118,9 @@ class Indexable<C,T>{
 	private function get_length():Int {
 		throw "abstract method";
 		return null;
+	}  
+  public function toString() {
+		return "l :" + this.length +"d :("  + Std.string(data) + ")";
 	}
 }
 
